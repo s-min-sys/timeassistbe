@@ -1,0 +1,17 @@
+- ID: ""
+  TType: 1
+  Value: 10
+  Auto: true
+  TimeZone: 8
+  ValidRanges:
+    ValidDaysInWeek:
+        ValidRanges:
+            - Start: 1
+              End: 6
+    ValidHoursInDay:
+        ValidRanges:
+            - Start: 9
+              End: 13
+            - Start: 14
+              End: 22
+  Text: message
