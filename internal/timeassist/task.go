@@ -5,10 +5,10 @@ import (
 	"time"
 )
 
-type RecycleTaskType int
+type TaskType int
 
 const (
-	RecycleTaskTypeBegin RecycleTaskType = iota
+	TaskTypeBegin TaskType = iota
 	RecycleTaskTypeMinutes
 	RecycleTaskTypeHours
 	RecycleTaskTypeDays
@@ -17,10 +17,11 @@ const (
 	RecycleTaskTypeLunarMonths
 	RecycleTaskTypeYears
 	RecycleTaskTypeLunarYears
-	RecycleTaskTypeEnd
+	OnceTask
+	TaskTypeEnd
 )
 
-func (o RecycleTaskType) String() string {
+func (o TaskType) String() string {
 	switch o {
 	case RecycleTaskTypeMinutes:
 		return "RecycleTaskTypeMinutes"
@@ -38,43 +39,59 @@ func (o RecycleTaskType) String() string {
 		return "RecycleTaskTypeYears"
 	case RecycleTaskTypeLunarYears:
 		return "RecycleTaskTypeLunarYears"
+	case OnceTask:
+		return "OnceTask"
 	}
 
 	return "RecycleTaskTypUnknown"
 }
 
-type RecycleTask struct {
-	ID    string          `yaml:"ID" json:"id,omitempty"`
-	TType RecycleTaskType `yaml:"TType,omitempty" json:"t_type,omitempty"`
-	Value int             `yaml:"Value,omitempty" json:"value,omitempty"`
-	Auto  bool            `yaml:"Auto,omitempty" json:"auto,omitempty"`
+type Task struct {
+	ID    string   `yaml:"ID" json:"id,omitempty"`
+	TType TaskType `yaml:"TType,omitempty" json:"t_type,omitempty"`
+
+	Text string `yaml:"Text" json:"text,omitempty"`
+
+	//
+	// recycle task
+	//
+
+	Value int  `yaml:"Value,omitempty" json:"value,omitempty"`
+	Auto  bool `yaml:"Auto,omitempty" json:"auto,omitempty"`
 
 	TimeZone  int        `yaml:"TimeZone,omitempty" json:"timeZone,omitempty"`
 	ValidTime *ValidTime `yaml:"ValidRanges,omitempty" json:"valid_time,omitempty"`
-
-	Text string `yaml:"Text" json:"text,omitempty"`
 }
 
-type RecycleData struct {
-	ID       string `yaml:"ID"`
-	StartUTC int64  `yaml:"StartUTC"`
-	EndUTC   int64  `yaml:"EndUTC"`
+type TaskData struct {
+	ID       string   `yaml:"ID"`
+	TType    TaskType `yaml:"TType" json:"t_type,omitempty"`
+	StartUTC int64    `yaml:"StartUTC"`
+	EndUTC   int64    `yaml:"EndUTC"`
 }
 
-func (ct *RecycleTask) Valid() (err error) {
+func (ct *Task) Valid() (err error) {
 	err = os.ErrInvalid
 
-	if ct.ID != "" && ct.TType > RecycleTaskTypeBegin && ct.TType < RecycleTaskTypeEnd && ct.Value > 0 && ct.Text != "" {
-		err = nil
+	if ct.ID == "" || ct.TType <= TaskTypeBegin || ct.TType >= TaskTypeEnd || ct.Text == "" {
+		return
 	}
+
+	if ct.TType != OnceTask {
+		if ct.Value <= 0 {
+			return
+		}
+	}
+
+	err = nil
 
 	return
 }
 
-func (ct *RecycleTask) GenRecycleData() (rd *RecycleData, nowIsValid bool) {
+func (ct *Task) GenRecycleData() (rd *TaskData, nowIsValid bool) {
 	return ct.GenRecycleDataEx(time.Now())
 }
-func (ct *RecycleTask) GenRecycleDataEx(timeNow time.Time) (rd *RecycleData, nowIsValid bool) {
+func (ct *Task) GenRecycleDataEx(timeNow time.Time) (rd *TaskData, nowIsValid bool) {
 	rd, nowIsValid = ct.genRecycleDataEx(timeNow)
 	if rd.EndUTC > time.Now().Unix() {
 		return
@@ -92,8 +109,8 @@ func (ct *RecycleTask) GenRecycleDataEx(timeNow time.Time) (rd *RecycleData, now
 	return
 }
 
-func (ct *RecycleTask) genRecycleDataEx(timeNow time.Time) (rd *RecycleData, nowIsValid bool) {
-	rd = &RecycleData{
+func (ct *Task) genRecycleDataEx(timeNow time.Time) (rd *TaskData, nowIsValid bool) {
+	rd = &TaskData{
 		ID: ct.ID,
 	}
 

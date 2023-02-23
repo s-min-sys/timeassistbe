@@ -1,0 +1,12 @@
+- ID: ""
+  AType: 4
+  Text: "周五18点: 周末了"
+  Value: 5180000
+  TimeZone: 8
+
+- ID: ""
+  AType: 4
+  Text: "周日晚上20点: 下周开始了"
+  Value: 0200000
+  TimeZone: 8
+  

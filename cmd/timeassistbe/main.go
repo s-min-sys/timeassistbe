@@ -10,6 +10,7 @@ import (
 	"github.com/s-min-sys/timeassistbe/internal/autoimport"
 	"github.com/s-min-sys/timeassistbe/internal/timeassist"
 	"github.com/sgostarter/i/l"
+	"github.com/sgostarter/libeasygo/stg/kv"
 )
 
 func main() {
@@ -17,17 +18,23 @@ func main() {
 	logger.GetLogger().SetLevel(l.LevelDebug)
 	logger.Info("new time assist start at:", time.Now())
 
-	taskStorage := timeassist.NewRecycleTaskStorage("task_meta")
-	taskTimer := timeassist.NewRecycleTaskTimer("task_timer")
-	taskList := timeassist.NewRecycleTaskList("task_list", func(task *timeassist.TaskInfo, visible bool) {})
-	taskManger := timeassist.NewRecycleTaskManager(taskStorage, taskTimer, taskList, logger)
+	metaStorage, _ := kv.NewMemoryFileStorage("task_meta")
+	timer := timeassist.NewTaskTimer("task_timer")
+	taskTimer := timeassist.NewBizTimer(timer)
 
-	autoimport.TryImportConfigs("./import", taskManger, logger)
+	taskList := timeassist.NewTaskList("task_list", func(task *timeassist.TaskInfo, visible bool) {})
 
+	taskManger := timeassist.NewTaskManager(metaStorage, taskTimer, taskList, logger)
+	alarmManager := timeassist.NewAlarmManager(metaStorage, taskTimer, taskList, logger)
+
+	timer.Start()
+
+	autoimport.TryImportTaskConfigs("./import", "_task.yaml", taskManger, logger)
+	autoimport.TryImportAlarmConfigs("./import", "_alarm.yaml", alarmManager, logger)
 	r := mux.NewRouter()
 
 	r.HandleFunc("/tasks", func(writer http.ResponseWriter, request *http.Request) {
-		tasks, err := taskManger.GetCurrentList()
+		tasks, err := taskList.GetList()
 		if err != nil {
 			writer.WriteHeader(http.StatusInternalServerError)
 			_, _ = writer.Write([]byte(err.Error()))

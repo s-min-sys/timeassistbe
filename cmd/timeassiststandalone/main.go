@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
@@ -16,6 +15,7 @@ import (
 	"github.com/s-min-sys/timeassistbe/internal/timeassist"
 	"github.com/s-min-sys/timeassistbe/internal/ws"
 	"github.com/sgostarter/i/l"
+	"github.com/sgostarter/libeasygo/stg/kv"
 	"go.uber.org/atomic"
 )
 
@@ -28,9 +28,11 @@ func main() {
 
 	timeMessages := term.NewTimeMessages()
 
-	taskStorage := timeassist.NewRecycleTaskStorage("task_meta")
-	taskTimer := timeassist.NewRecycleTaskTimer("task_timer")
-	taskList := timeassist.NewRecycleTaskList("task_list", func(task *timeassist.TaskInfo, visible bool) {
+	metaStorage, _ := kv.NewMemoryFileStorage("task_meta")
+	timer := timeassist.NewTaskTimer("task_timer")
+	taskTimer := timeassist.NewBizTimer(timer)
+
+	taskList := timeassist.NewTaskList("task_list", func(task *timeassist.TaskInfo, visible bool) {
 		pre := "remove"
 		if visible {
 			pre = "add"
@@ -42,9 +44,14 @@ func main() {
 
 		activeTaskListChangeCh <- true
 	})
-	taskManger := timeassist.NewRecycleTaskManager(taskStorage, taskTimer, taskList, logger)
 
-	autoimport.TryImportConfigs("./import", taskManger, logger)
+	taskManger := timeassist.NewTaskManager(metaStorage, taskTimer, taskList, logger)
+	alarmManager := timeassist.NewAlarmManager(metaStorage, taskTimer, taskList, logger)
+
+	timer.Start()
+
+	autoimport.TryImportTaskConfigs("./import", "_task.yaml", taskManger, logger)
+	autoimport.TryImportAlarmConfigs("./import", "_alarm.yaml", alarmManager, logger)
 
 	var activeTaskListText atomic.String
 
@@ -54,7 +61,7 @@ func main() {
 		for {
 			time.Sleep(time.Second)
 
-			tasks, err := taskManger.GetCurrentList()
+			tasks, err := taskList.GetList()
 			if err != nil {
 				logger.WithFields(l.ErrorField(err)).Error("get current list failed")
 				continue
@@ -65,7 +72,7 @@ func main() {
 			ss := strings.Builder{}
 
 			for _, task := range tasks {
-				ss.WriteString(fmt.Sprintf("%s: %s\n", task.ID, task.Value))
+				ss.WriteString(fmt.Sprintf("%s: %s [%s]\n", task.ID, task.Value, task.SubTitle))
 			}
 
 			if lastActiveTaskList != ss.String() {
@@ -115,31 +122,8 @@ func main() {
 
 	go func() {
 		r := mux.NewRouter()
-
-		fakeTaskIdx := 0
-		r.HandleFunc("/fake/tasks", func(writer http.ResponseWriter, request *http.Request) {
-			var tasks []*timeassist.TaskInfo
-
-			tasks = append(tasks, &timeassist.TaskInfo{
-				ID:    strconv.Itoa(fakeTaskIdx),
-				Value: fmt.Sprintf("TITLE-%d", fakeTaskIdx),
-			})
-
-			fakeTaskIdx++
-
-			tasks = append(tasks, &timeassist.TaskInfo{
-				ID:    strconv.Itoa(fakeTaskIdx),
-				Value: fmt.Sprintf("TITLE-%d", fakeTaskIdx),
-			})
-
-			fakeTaskIdx++
-
-			d, _ := json.Marshal(tasks)
-
-			_, _ = writer.Write(d)
-		})
 		r.HandleFunc("/tasks", func(writer http.ResponseWriter, request *http.Request) {
-			tasks, err := taskManger.GetCurrentList()
+			tasks, err := taskList.GetList()
 			if err != nil {
 				writer.WriteHeader(http.StatusInternalServerError)
 				_, _ = writer.Write([]byte(err.Error()))
@@ -180,7 +164,7 @@ func main() {
 				for {
 					time.Sleep(time.Second)
 
-					tasks, err := taskManger.GetCurrentList()
+					tasks, err := taskList.GetList()
 					if err != nil {
 						continue
 					}

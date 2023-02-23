@@ -236,3 +236,29 @@ func IsWorkDay(t time.Time) bool {
 func WeekIndexInMonth(t time.Time) int {
 	return calendar.NewSolarWeekFromDate(t, 1).GetIndex()
 }
+
+func ToDateTime(year, month, day, hour, minute, second int, location *time.Location) time.Time {
+	return time.Date(year, time.Month(month), day, hour, minute, second, 0, location)
+}
+
+func ToLunarDateTime(year, month, day, hour, minute, second int) time.Time {
+	return calendar.NewLunar(year, month, day, hour, minute, second).GetSolar().GetCalendar().In(time.FixedZone("z8", 8*3600))
+}
+
+func GetDaysOfMonth(year int, month int) int {
+	return SolarUtil.GetDaysOfMonth(year, month)
+}
+
+func LunarYMD(t time.Time) (year, month, day int) {
+	l := calendar.NewSolarFromDate(t.In(time.Local)).GetLunar()
+
+	year = l.GetYear()
+	month = l.GetMonth()
+	day = l.GetDay()
+
+	return
+}
+
+func LunarGetDaysOfMonth(year int, month int) int {
+	return calendar.NewLunarYear(year).GetMonth(month).GetDayCount()
+}

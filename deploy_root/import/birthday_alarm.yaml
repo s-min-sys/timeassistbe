@@ -1,0 +1,11 @@
+- ID: ""
+  AType: 2
+  Text: "我的阴历生日"
+  Value: L1025090000
+  TimeZone: 8
+
+- ID: ""
+  AType: 2
+  Text: "我的阳历生日"
+  Value: S1121090000
+  TimeZone: 8

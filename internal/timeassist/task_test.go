@@ -12,7 +12,7 @@ import (
 )
 
 func TestGenRecycleTaskYaml(t *testing.T) {
-	rt := &RecycleTask{
+	rt := &Task{
 		TType:    RecycleTaskTypeMinutes,
 		Value:    10,
 		Auto:     true,
@@ -42,7 +42,7 @@ func TestGenRecycleTaskYaml(t *testing.T) {
 		Text: "message",
 	}
 
-	rts := []*RecycleTask{
+	rts := []*Task{
 		rt,
 	}
 
@@ -89,7 +89,7 @@ func TestRecycleTask1(t *testing.T) {
 		},
 	}
 
-	ct := &RecycleTask{
+	ct := &Task{
 		TType:     RecycleTaskTypeMinutes,
 		Value:     10,
 		Auto:      false,
@@ -218,7 +218,7 @@ func TestRecycleTask2(t *testing.T) {
 		},
 	}
 
-	ct := &RecycleTask{
+	ct := &Task{
 		TType:     RecycleTaskTypeHours,
 		Value:     3,
 		Auto:      false,
@@ -256,4 +256,16 @@ func TestRecycleTask2(t *testing.T) {
 	}
 
 	// t.Log(ss.String())
+}
+
+func TestTime(t *testing.T) {
+	a := struct {
+		T time.Time
+	}{
+		time.Now(),
+	}
+
+	d, err := yaml.Marshal(a)
+	assert.Nil(t, err)
+	t.Log(string(d))
 }

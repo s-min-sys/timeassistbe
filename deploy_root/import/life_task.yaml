@@ -1,0 +1,25 @@
+- ID: ""
+  TType: 3
+  Value: 2
+  Auto: true
+  TimeZone: 8
+  Text: "2天：打印机打印"
+
+- ID: ""
+  TType: 2
+  Value: 2
+  Auto: true
+  TimeZone: 8
+  ValidRanges:
+    ValidDaysInWeek:
+      ValidRanges:
+        - Start: 1
+          End: 6
+    ValidHoursInDay:
+      ValidRanges:
+        - Start: 9
+          End: 12
+        - Start: 14
+          End: 22
+  Text: "2小时：躺一会"
+
