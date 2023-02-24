@@ -10,7 +10,6 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/sgostarter/i v0.1.14
 	github.com/sgostarter/libeasygo v0.0.0-00010101000000-000000000000
-	github.com/spf13/cast v1.4.1
 	github.com/stretchr/testify v1.8.1
 	go.uber.org/atomic v1.10.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -22,4 +21,4 @@ require (
 	golang.org/x/sys v0.0.0-20220328115105-d36c6a25d886 // indirect
 )
 
-replace github.com/sgostarter/libeasygo => F:\work\libeasygo
+// replace github.com/sgostarter/libeasygo => F:\work\libeasygo

@@ -1,9 +1,11 @@
 package timeassist
 
 import (
+	"time"
+
+	uuid "github.com/satori/go.uuid"
 	"github.com/sgostarter/i/commerr"
 	"github.com/sgostarter/libeasygo/stg/kv"
-	"time"
 )
 
 type VOTaskType int
@@ -36,6 +38,11 @@ type TaskInfo struct {
 	//
 	//
 	VOTaskType VOTaskType `json:"vo_task_type"`
+
+	//
+	//
+	//
+	NotifyID string `json:"notify_id,omitempty"`
 }
 
 func (taskInfo *TaskInfo) AutoFill() {
@@ -47,15 +54,6 @@ func (taskInfo *TaskInfo) AutoFill() {
 	default:
 		taskInfo.VOTaskType = VOTaskTypeUnknown
 	}
-}
-
-func (taskInfo *TaskInfo) Equal(other *TaskInfo) bool {
-	if other == nil {
-		return false
-	}
-
-	return taskInfo.ID == other.ID && taskInfo.Value == other.Value &&
-		taskInfo.SubTitle == other.SubTitle && taskInfo.AlarmFlag == other.AlarmFlag
 }
 
 type TaskInfos []*TaskInfo
@@ -102,16 +100,22 @@ func (impl *taskListImpl) Add(taskInfo *TaskInfo) (err error) {
 		return
 	}
 
+	taskInfo.AutoFill()
+
 	var taskInfoOld TaskInfo
 	ok, err := impl.storage.Get(taskInfo.ID, &taskInfoOld)
 	if err != nil {
 		return
 	}
 
+	var forceUpdateNotifyID bool
+
 	if ok {
-		if taskInfoOld.Equal(taskInfo) {
-			return
+		if taskInfo.VOTaskType == VOTaskTypeAlarm && taskInfo.AlarmFlag && !taskInfoOld.AlarmFlag {
+			forceUpdateNotifyID = true
 		}
+
+		taskInfo.NotifyID = taskInfoOld.NotifyID
 
 		if impl.changeObserver != nil {
 			impl.changeObserver(&TaskInfo{
@@ -119,6 +123,10 @@ func (impl *taskListImpl) Add(taskInfo *TaskInfo) (err error) {
 				Value: taskInfoOld.Value,
 			}, false)
 		}
+	}
+
+	if forceUpdateNotifyID || taskInfo.NotifyID == "" {
+		taskInfo.NotifyID = uuid.NewV4().String()
 	}
 
 	err = impl.storage.Set(taskInfo.ID, &taskInfo)

@@ -41,6 +41,10 @@ type Alarm struct {
 
 	Value    string `yaml:"Value,omitempty" json:"value,omitempty"` // @see AlarmValue
 	TimeZone int    `yaml:"TimeZone,omitempty" json:"timeZone,omitempty"`
+
+	ValidTime *ValidTime `yaml:"ValidRanges,omitempty" json:"valid_time,omitempty"`
+
+	EarlyShowMinute uint8 `yaml:"EarlyShowMinute,omitempty" json:"early_show_minute,omitempty"`
 }
 
 func (a *Alarm) Validate() (av *AlarmValue, err error) {
@@ -224,6 +228,14 @@ func (a *Alarm) GenRecycleDataEx(timeNow, timeLastAt time.Time) (av *AlarmValue,
 		showDuration = time.Minute * 5
 	default:
 		return
+	}
+
+	if a.ValidTime != nil {
+		_, timeAt = a.ValidTime.FindAfterTime(timeAt)
+	}
+
+	if a.EarlyShowMinute > 0 {
+		showDuration = time.Minute * time.Duration(a.EarlyShowMinute)
 	}
 
 	timeShow := timeAt.Add(-showDuration)

@@ -1,0 +1,22 @@
+- ID: ""
+  AType: 5
+  Text: "兄弟，午休了"
+  Value: 120000
+  TimeZone: 8
+  EarlyShowMinute: 5
+  ValidRanges:
+    ValidDaysInWeek:
+      ValidRanges:
+        - Start: 1
+          End: 6
+- ID: ""
+  AType: 5
+  Text: "兄弟，上班了"
+  Value: 140000
+  EarlyShowMinute: 5
+  TimeZone: 8
+  ValidRanges:
+    ValidDaysInWeek:
+      ValidRanges:
+        - Start: 1
+          End: 6
