@@ -45,6 +45,11 @@ type Alarm struct {
 	ValidTime *ValidTime `yaml:"ValidRanges,omitempty" json:"valid_time,omitempty"`
 
 	EarlyShowMinute uint8 `yaml:"EarlyShowMinute,omitempty" json:"early_show_minute,omitempty"`
+
+	//
+	//
+	//
+	TimeLastAt int64 `yaml:"TimeLastAt,omitempty" json:"time_last_at,omitempty"`
 }
 
 func (a *Alarm) Validate() (av *AlarmValue, err error) {
@@ -177,12 +182,12 @@ func (a *Alarm) GenRecycleDataEx(timeNow, timeLastAt time.Time) (av *AlarmValue,
 
 		showDuration = time.Hour * 24
 	case RecycleAlarmTypeWeek:
-		timeAt = timeNow
-		for int(timeAt.Weekday()) != av.Week {
+		timeAt = ToDateTime(timeNow.Year(), int(timeNow.Month()), timeNow.Day(), av.Hour, av.Minute, av.Second, timeNow.Location())
+		fmt.Println(timeAt, timeNow)
+		for int(timeAt.Weekday()) != av.Week || timeAt.Before(timeNow) {
 			timeAt = DayAdd(timeAt, 1)
 		}
 
-		timeAt = ToDateTime(timeAt.Year(), int(timeAt.Month()), timeAt.Day(), av.Hour, av.Minute, av.Second, timeAt.Location())
 		showDuration = time.Hour * 2
 	case RecycleAlarmTypeDay:
 		year := timeNow.Year()
@@ -225,15 +230,16 @@ func (a *Alarm) GenRecycleDataEx(timeNow, timeLastAt time.Time) (av *AlarmValue,
 			goto ReCalcMinute
 		}
 
-		showDuration = time.Minute * 5
+		showDuration = time.Second * 5
 	default:
 		return
 	}
 
+	fmt.Println(timeAt)
 	if a.ValidTime != nil {
 		_, timeAt = a.ValidTime.FindAfterTime(timeAt)
 	}
-
+	fmt.Println(timeAt)
 	if a.EarlyShowMinute > 0 {
 		showDuration = time.Minute * time.Duration(a.EarlyShowMinute)
 	}
@@ -254,15 +260,16 @@ func (a *Alarm) GenRecycleDataEx(timeNow, timeLastAt time.Time) (av *AlarmValue,
 
 	rd = rdNow
 
-	if timeLastAt.Before(timeNow) {
+	if timeShow.Before(timeNow) {
 		show = true
-		alarm = true
 
 		return
 	}
 
-	if timeShow.Before(timeNow) {
-		show = true
+	if timeLastAt.Before(timeNow) {
+		alarm = true
+
+		return
 	}
 
 	return

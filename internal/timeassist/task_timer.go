@@ -145,7 +145,7 @@ func (impl *taskTimerImpl) Start() {
 		for {
 			impl.check()
 
-			time.Sleep(time.Minute)
+			time.Sleep(time.Second * 10)
 		}
 	}()
 }

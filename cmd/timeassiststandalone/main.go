@@ -212,7 +212,14 @@ func main() {
 		n, _, _ := consoleUI.ReadInt("请选择:")
 		if n == 1 {
 			id, _, _ := consoleUI.ReadString("请选择输入ID: ")
-			if err := taskManger.Done(id); err != nil {
+
+			var err error
+			if timeassist.ParsePreOnID(id) == timeassist.TaskIDPre {
+				err = taskManger.Done(id)
+			} else {
+				err = alarmManager.Done(id)
+			}
+			if err != nil {
 				consoleUI.Println(fmt.Sprintf("task %s done failed: %s", id, err.Error()))
 			} else {
 				consoleUI.Println(fmt.Sprintf("task %s done!", id))

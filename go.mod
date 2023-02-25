@@ -9,7 +9,7 @@ require (
 	github.com/gorilla/websocket v1.5.0
 	github.com/satori/go.uuid v1.2.0
 	github.com/sgostarter/i v0.1.14
-	github.com/sgostarter/libeasygo v0.0.0-00010101000000-000000000000
+	github.com/sgostarter/libeasygo v0.1.39
 	github.com/stretchr/testify v1.8.1
 	go.uber.org/atomic v1.10.0
 	gopkg.in/yaml.v3 v3.0.1

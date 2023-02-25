@@ -53,28 +53,28 @@ func (impl *alarmManagerImpl) Add(alarm *Alarm) (err error) {
 		return
 	}
 
+	alarm.TimeLastAt = 0
+
 	err = impl.storage.Set(alarm.ID, alarm)
 	if err != nil {
 		return
 	}
 
 	if show {
-		var expire string
-		if alarmFlag {
-			expire = " - 已过期"
-		}
-
 		_ = impl.taskList.Add(&TaskInfo{
 			ID:        alarm.ID,
 			Value:     alarm.Text,
-			SubTitle:  av.String(alarm.AType, timeAt) + expire,
+			SubTitle:  av.String(alarm.AType, timeAt),
 			AlarmFlag: alarmFlag,
-			AlarmLast: timeAt,
+			AlarmAt:   timeAt,
 		})
 
 		if rd != nil {
 			err = impl.timer.AddTimer(time.Unix(rd.EndUTC, 0), rd)
 		}
+
+		alarm.TimeLastAt = rd.EndUTC
+		_ = impl.storage.Set(alarm.ID, alarm)
 	} else {
 		err = impl.timer.AddTimer(time.Unix(rd.StartUTC, 0), rd)
 	}
@@ -94,6 +94,14 @@ func (impl *alarmManagerImpl) Remove(id string) error {
 }
 
 func (impl *alarmManagerImpl) Done(id string) error {
+	alarm := &Alarm{}
+
+	ok, err := impl.storage.Get(id, alarm)
+	if err == nil && ok {
+		alarm.TimeLastAt = 0
+
+		_ = impl.storage.Set(id, alarm)
+	}
 	return impl.taskList.Remove(id)
 }
 
@@ -112,12 +120,8 @@ func (impl *alarmManagerImpl) timerCb(dRemoved *TaskData) (at time.Time, data *T
 	timeNow := time.Now()
 	timeLastAt := timeNow
 
-	tryUpdateTimeLastAt := true
-
-	if taskInList, _ := impl.taskList.Get(dRemoved.ID); taskInList != nil {
-		timeLastAt = taskInList.AlarmLast
-
-		tryUpdateTimeLastAt = false
+	if alarm.TimeLastAt > 0 {
+		timeLastAt = time.Unix(alarm.TimeLastAt, 0)
 	}
 
 	av, timeAt, rd, show, alarmFlag, err := alarm.GenRecycleDataEx(timeNow, timeLastAt)
@@ -125,26 +129,26 @@ func (impl *alarmManagerImpl) timerCb(dRemoved *TaskData) (at time.Time, data *T
 		return
 	}
 
-	if show {
-		var expire string
-		if alarmFlag {
-			if tryUpdateTimeLastAt && timeLastAt == timeAt {
-				expire = " - 已过期"
-			} else {
-				expire = " - 有过期"
-			}
-		}
-
-		alarmLast := timeAt
-		if !tryUpdateTimeLastAt {
-			alarmLast = timeLastAt
-		}
+	if alarmFlag {
 		_ = impl.taskList.Add(&TaskInfo{
 			ID:        alarm.ID,
 			Value:     alarm.Text,
-			SubTitle:  av.String(alarm.AType, timeAt) + expire,
+			SubTitle:  av.String(alarm.AType, timeLastAt) + " - 过期",
 			AlarmFlag: alarmFlag,
-			AlarmLast: alarmLast,
+			AlarmAt:   timeAt,
+		})
+
+		if rd != nil {
+			at = time.Unix(rd.StartUTC, 0)
+			data = rd
+		}
+	} else if show {
+		_ = impl.taskList.Add(&TaskInfo{
+			ID:        alarm.ID,
+			Value:     alarm.Text,
+			SubTitle:  av.String(alarm.AType, timeAt),
+			AlarmFlag: alarmFlag,
+			AlarmAt:   timeAt,
 		})
 
 		if rd != nil {
@@ -152,11 +156,10 @@ func (impl *alarmManagerImpl) timerCb(dRemoved *TaskData) (at time.Time, data *T
 			data = rd
 		}
 
+		alarm.TimeLastAt = rd.EndUTC
+		_ = impl.storage.Set(dRemoved.ID, alarm)
 	} else {
-		_ = impl.taskList.Remove(dRemoved.ID)
-
 		at = time.Unix(rd.StartUTC, 0)
-
 		data = rd
 	}
 

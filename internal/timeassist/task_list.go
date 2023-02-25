@@ -32,7 +32,7 @@ type TaskInfo struct {
 	//
 
 	AlarmFlag bool      `json:"alarm_flag,omitempty"`
-	AlarmLast time.Time `json:"alarm_last,omitempty"`
+	AlarmAt   time.Time `json:"alarm_at,omitempty"`
 
 	//
 	//
