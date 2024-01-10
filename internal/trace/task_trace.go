@@ -54,8 +54,6 @@ func (tt *taskTraceImpl) get(taskID string) *os.File {
 	f, err := os.OpenFile(path.Join(tt.root, taskID), os.O_CREATE|os.O_APPEND, os.ModePerm)
 	if err != nil {
 		panic("file:" + path.Join(tt.root, taskID))
-
-		return nil
 	}
 
 	tt.files[taskID] = f

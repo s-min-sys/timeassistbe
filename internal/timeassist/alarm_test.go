@@ -2,11 +2,13 @@ package timeassist
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
+// nolint
 func utErrIsNil(f bool) func(assert.TestingT, error, ...interface{}) bool {
 	return func(t assert.TestingT, err error, i ...interface{}) bool {
 		if f {
@@ -20,6 +22,7 @@ func utErrIsNil(f bool) func(assert.TestingT, error, ...interface{}) bool {
 	}
 }
 
+// nolint
 func Test_parseAlarmValueOnce(t *testing.T) {
 	type args struct {
 		value string
@@ -63,6 +66,7 @@ func Test_parseAlarmValueOnce(t *testing.T) {
 	}
 }
 
+// nolint
 func Test_parseAlarmValueWeek(t *testing.T) {
 	type args struct {
 		value string
@@ -115,6 +119,7 @@ func Test_parseAlarmValueWeek(t *testing.T) {
 	}
 }
 
+// nolint
 func TestAlarm_GenRecycleDataEx(t *testing.T) {
 	tz := time.FixedZone("X", 8*3600)
 

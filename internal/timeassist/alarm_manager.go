@@ -102,6 +102,7 @@ func (impl *alarmManagerImpl) Done(id string) error {
 
 		_ = impl.storage.Set(id, alarm)
 	}
+
 	return impl.taskList.Remove(id)
 }
 

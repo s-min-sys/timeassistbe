@@ -39,7 +39,8 @@ func (impl *Ws) init(addr string, handlers map[string]Handler) {
 			}}
 
 			conn, err := upgrader.Upgrade(writer, request, nil)
-			defer conn.Close()
+
+			defer conn.Close() // nolint: staticcheck
 
 			if err != nil {
 				_, _ = writer.Write([]byte(err.Error()))

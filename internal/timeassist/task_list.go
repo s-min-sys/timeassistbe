@@ -89,7 +89,7 @@ type taskListImpl struct {
 	changeObserver TaskListChangeObserver
 }
 
-func (impl *taskListImpl) SetOb(ob TaskListChangeObserver) error {
+func (impl *taskListImpl) SetOb(_ TaskListChangeObserver) error {
 	return commerr.ErrUnavailable
 }
 
@@ -103,6 +103,7 @@ func (impl *taskListImpl) Add(taskInfo *TaskInfo) (err error) {
 	taskInfo.AutoFill()
 
 	var taskInfoOld TaskInfo
+
 	ok, err := impl.storage.Get(taskInfo.ID, &taskInfoOld)
 	if err != nil {
 		return

@@ -54,7 +54,8 @@ func tryImportTaskConfigs(file string, taskManger timeassist.TaskManager, logger
 		return
 	}
 
-	for _, task := range tasks {
+	for idx := 0; idx < len(tasks); idx++ {
+		task := tasks[idx]
 		if err = taskManger.Add(&task); err != nil {
 			logger.WithFields(l.ErrorField(err), l.StringField("id", task.ID)).Error("try import task failed")
 		} else {
@@ -111,7 +112,8 @@ func tryImportAlarmConfigs(file string, alarmManager timeassist.AlarmManager, lo
 		return
 	}
 
-	for _, alarm := range alarms {
+	for idx := 0; idx < len(alarms); idx++ {
+		alarm := alarms[idx]
 		if err = alarmManager.Add(&alarm); err != nil {
 			logger.WithFields(l.ErrorField(err), l.StringField("id", alarm.ID)).Error("try import alarm failed")
 		} else {

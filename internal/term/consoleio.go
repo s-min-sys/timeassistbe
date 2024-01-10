@@ -12,6 +12,7 @@ import (
 
 var clear map[string]func()
 
+// nolint: gochecknoinits
 func init() {
 	clear = make(map[string]func())
 	clear["linux"] = func() {
@@ -46,19 +47,19 @@ type ConsoleIO struct {
 }
 
 func (ci *ConsoleIO) Print(s string) {
-	fmt.Print(s)
+	fmt.Print(s) // nolint: forbidigo
 }
 
 func (ci *ConsoleIO) Println(s string) {
-	fmt.Println(s)
+	fmt.Println(s) // nolint: forbidigo
 }
 
 func (ci *ConsoleIO) Printf(format string, a ...any) {
-	fmt.Printf(format, a...)
+	fmt.Printf(format, a...) // nolint:forbidigo
 }
 
 func (ci *ConsoleIO) ReadString(tip string) (s string, ok bool, err error) {
-	fmt.Print(tip)
+	fmt.Print(tip) // nolint:forbidigo
 
 	s, err = ci.reader.ReadString('\n')
 	if err != nil {

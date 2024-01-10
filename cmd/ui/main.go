@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	tm "github.com/buger/goterm"
 	"time"
+
+	tm "github.com/buger/goterm"
 )
 
 func NewBox(width, height int) *ConsoleBox {

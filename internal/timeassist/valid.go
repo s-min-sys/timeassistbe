@@ -18,8 +18,8 @@ func (o *ValidRanges) IsValid(value int) bool {
 		return true
 	}
 
-	for _, hoursRange := range o.ValidRanges {
-		if value >= hoursRange.Start && value < hoursRange.End {
+	for _, validRange := range o.ValidRanges {
+		if value >= validRange.Start && value < validRange.End {
 			return true
 		}
 	}

@@ -1,10 +1,11 @@
 package timeassist
 
 import (
-	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 const (
@@ -49,6 +50,8 @@ func TestNewRecycleTaskTimer(t *testing.T) {
 		EndUTC:   time.Now().Add(time.Second * 40).Unix(),
 	})
 	assert.Nil(t, err)
+
+	timer.Start()
 
 	time.Sleep(time.Minute * 2)
 }

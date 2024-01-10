@@ -64,6 +64,7 @@ func main() {
 			tasks, err := taskList.GetList()
 			if err != nil {
 				logger.WithFields(l.ErrorField(err)).Error("get current list failed")
+
 				continue
 			}
 
@@ -113,10 +114,8 @@ func main() {
 
 			fnPrintUI()
 
-			select {
-			case <-activeTaskListChangeCh:
-				fnPrintUI()
-			}
+			<-activeTaskListChangeCh
+			fnPrintUI()
 		}
 	}()
 
@@ -159,7 +158,7 @@ func main() {
 	go func() {
 		ws.NewWs(":11111", map[string]ws.Handler{
 			"/ws/tasks": func(route string, conn *websocket.Conn) {
-				var lastJson string
+				var lastJSON string
 
 				for {
 					time.Sleep(time.Second)
@@ -176,11 +175,11 @@ func main() {
 						continue
 					}
 
-					if lastJson == string(d) {
+					if lastJSON == string(d) {
 						continue
 					}
 
-					lastJson = string(d)
+					lastJSON = string(d)
 
 					err = conn.WriteMessage(websocket.TextMessage, d)
 					if err != nil {
@@ -192,7 +191,6 @@ func main() {
 	}()
 
 	for {
-
 		s, _, _ := consoleUI.ReadString("")
 		if s != "m" && s != "M" {
 			enableTaskListUpdateAuto.Store(true)
@@ -209,6 +207,7 @@ func main() {
 		consoleUI.Println("操作")
 		consoleUI.Println("\t1: Done")
 		consoleUI.Println("\t9: 取消")
+
 		n, _, _ := consoleUI.ReadInt("请选择:")
 		if n == 1 {
 			id, _, _ := consoleUI.ReadString("请选择输入ID: ")
@@ -219,6 +218,7 @@ func main() {
 			} else {
 				err = alarmManager.Done(id)
 			}
+
 			if err != nil {
 				consoleUI.Println(fmt.Sprintf("task %s done failed: %s", id, err.Error()))
 			} else {

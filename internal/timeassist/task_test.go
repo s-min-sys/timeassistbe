@@ -2,15 +2,16 @@ package timeassist
 
 import (
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"gopkg.in/yaml.v3"
 )
 
+// nolint
 func TestGenRecycleTaskYaml(t *testing.T) {
 	rt := &Task{
 		TType:    RecycleTaskTypeMinutes,
@@ -51,6 +52,7 @@ func TestGenRecycleTaskYaml(t *testing.T) {
 	fmt.Print("\n" + string(d))
 }
 
+// nolint
 func utCheck1(t *testing.T) func(b, eB bool, startUTC, endUTC int64, sY, sMonth, sD, sH, sMinute, sS, eY, eMonth, eD, eH, eMinute, eS int) {
 	return func(b, eB bool, startUTC, endUTC int64, sY, sMonth, sD, sH, sMinute, sS, eY, eMonth, eD, eH, eMinute, eS int) {
 		assert.EqualValues(t, eB, b)
@@ -73,6 +75,7 @@ func utCheck1(t *testing.T) func(b, eB bool, startUTC, endUTC int64, sY, sMonth,
 	}
 }
 
+// nolint
 func TestRecycleTask1(t *testing.T) {
 	vt := &ValidTime{
 		ValidMonthsInYear: nil,
@@ -191,6 +194,7 @@ func TestRecycleTask1(t *testing.T) {
 		2023, 2, 17, 0, 10, 0)
 }
 
+// nolint
 func TestRecycleTask2(t *testing.T) {
 	vt := &ValidTime{
 		ValidMonthsInYear: nil,
@@ -254,8 +258,6 @@ func TestRecycleTask2(t *testing.T) {
 
 		rd, nowIsValid = ct.GenRecycleDataEx(time.Unix(rd.EndUTC, 0))
 	}
-
-	// t.Log(ss.String())
 }
 
 func TestTime(t *testing.T) {

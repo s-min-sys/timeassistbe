@@ -61,13 +61,13 @@ func (impl *taskManagerImpl) formatTaskSubTitle(task *Task, taskData *TaskData) 
 	case RecycleTaskTypeWeeks:
 		timeLayout = "01月02号[Mon]"
 	case RecycleTaskTypeMonths:
-		timeLayout = "2006年01月02号"
+		timeLayout = "2006年01月02号" // nolint: goconst
 	case RecycleTaskTypeLunarMonths:
-		timeLayout = "2006年01月02号"
+		timeLayout = "2006年01月02号" // nolint: goconst
 	case RecycleTaskTypeYears:
-		timeLayout = "2006年01月02号"
+		timeLayout = "2006年01月02号" // nolint: goconst
 	case RecycleTaskTypeLunarYears:
-		timeLayout = "2006年01月02号"
+		timeLayout = "2006年01月02号" // nolint: goconst
 	case OnceTask:
 		return ""
 	}
@@ -146,7 +146,6 @@ func (impl *taskManagerImpl) Add(task *Task) (err error) {
 	}
 
 	rd, nowIsValid := task.GenRecycleData()
-
 	if nowIsValid {
 		err = impl.taskList.Add(&TaskInfo{
 			ID:       task.ID,

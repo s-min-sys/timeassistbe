@@ -2,10 +2,10 @@ package timeassist
 
 import (
 	"fmt"
-	"github.com/s-min-sys/timeassistbe/internal/trace"
 	"sync"
 	"time"
 
+	"github.com/s-min-sys/timeassistbe/internal/trace"
 	"github.com/sgostarter/libeasygo/stg/kv"
 )
 
@@ -103,6 +103,7 @@ func (impl *taskTimerImpl) check() {
 	timeNow := time.Now()
 
 	var at time.Time
+
 	var data *TaskData
 
 	for k, v := range ds {
@@ -135,7 +136,7 @@ func (impl *taskTimerImpl) check() {
 		} else {
 			_ = impl.storage.Del(k)
 
-			trace.Get().RecordRemoveTimeSchedule(data.ID)
+			trace.Get().RecordRemoveTimeSchedule(d.Data.ID)
 		}
 	}
 }
