@@ -83,6 +83,7 @@ func (a *Alarm) GenRecycleDataEx(timeNow, timeLastAt time.Time) (av *AlarmValue,
 
 	timeZone := time.FixedZone("X", a.TimeZone*3600)
 	timeNow = timeNow.In(timeZone)
+	timeLastAt = timeLastAt.In(timeZone)
 
 	var showDuration time.Duration
 

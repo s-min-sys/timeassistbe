@@ -84,6 +84,14 @@ func main() {
 		httpResp(&respWrapper, writer)
 	}).Methods("POST")
 
+	r.HandleFunc("/remove/alarm", func(writer http.ResponseWriter, request *http.Request) {
+		var respWrapper ResponseWrapper
+
+		respWrapper.Apply(handleRemoveAlarm(request, alarmManager))
+
+		httpResp(&respWrapper, writer)
+	}).Methods("POST")
+
 	r.HandleFunc("/tasks", func(writer http.ResponseWriter, request *http.Request) {
 		var respWrapper ResponseWrapper
 
@@ -167,6 +175,27 @@ func handleAddAlarm(request *http.Request, alarmManager timeassist.AlarmManager)
 	err = alarmManager.Add(&alarm)
 	if err != nil {
 		code = CodeErrParse
+		msg = err.Error()
+
+		return
+	}
+
+	code = CodeSuccess
+
+	return
+}
+
+func handleRemoveAlarm(request *http.Request, alarmManager timeassist.AlarmManager) (code Code, msg string) {
+	id := request.URL.Query().Get("id")
+	if id == "" {
+		code = CodeErrBadRequest
+
+		return
+	}
+
+	err := alarmManager.Remove(id)
+	if err != nil {
+		code = CodeErrInternal
 		msg = err.Error()
 
 		return
