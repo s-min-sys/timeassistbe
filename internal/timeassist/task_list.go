@@ -73,7 +73,7 @@ type TaskList interface {
 }
 
 func NewTaskList(fileName string, ob TaskListChangeObserver) TaskList {
-	storage, err := kv.NewMemoryFileStorage(fileName)
+	storage, err := kv.NewMemoryFileStorageEx(fileName, false)
 	if err != nil {
 		return nil
 	}
@@ -135,10 +135,8 @@ func (impl *taskListImpl) Add(taskInfo *TaskInfo) (err error) {
 		return
 	}
 
-	impl.changeObserver(&TaskInfo{
-		ID:    taskInfo.ID,
-		Value: taskInfo.Value,
-	}, true)
+	tmpTaskInfo := *taskInfo
+	impl.changeObserver(&tmpTaskInfo, true)
 
 	return
 }
@@ -186,7 +184,7 @@ func (impl *taskListImpl) Remove(taskID string) (err error) {
 }
 
 func (impl *taskListImpl) GetList() (tasks []*TaskInfo, err error) {
-	ds, err := impl.storage.GetList(func() interface{} {
+	ds, err := impl.storage.GetList(func(key string) interface{} {
 		return &TaskInfo{}
 	})
 	if err != nil {

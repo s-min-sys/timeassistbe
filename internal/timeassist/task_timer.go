@@ -72,7 +72,7 @@ func (impl *bizTimerImpl) timerCB(dRemoved *TaskData) (at time.Time, data *TaskD
 }
 
 func NewTaskTimer(fileName string) TaskTimer {
-	storage, err := kv.NewMemoryFileStorage(fileName)
+	storage, err := kv.NewMemoryFileStorageEx(fileName, false)
 	if err != nil {
 		return nil
 	}
@@ -93,7 +93,7 @@ type taskTimerImpl struct {
 }
 
 func (impl *taskTimerImpl) check() {
-	ds, err := impl.storage.GetMap(func() interface{} {
+	ds, err := impl.storage.GetMap(func(key string) interface{} {
 		return &D{}
 	})
 	if err != nil {

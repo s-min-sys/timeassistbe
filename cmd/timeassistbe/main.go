@@ -2,17 +2,22 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/s-min-sys/notifier-share/pkg"
 	"github.com/s-min-sys/timeassistbe/internal/autoimport"
 	"github.com/s-min-sys/timeassistbe/internal/timeassist"
 	"github.com/sgostarter/i/l"
+	"github.com/sgostarter/libconfig"
 	"github.com/sgostarter/libeasygo/pathutils"
+	"github.com/sgostarter/libeasygo/ptl"
 	"github.com/sgostarter/libeasygo/stg/kv"
 )
 
@@ -20,18 +25,36 @@ const (
 	dataRoot = "data"
 )
 
+type Config struct {
+	Listens   string `yaml:"Listens"`
+	NotifyURL string `yaml:"NotifyURL"`
+}
+
 func main() {
+	var cfg Config
+
+	_, err := libconfig.Load("config.yaml", &cfg)
+	if err != nil {
+		panic(err)
+	}
+
 	_ = pathutils.MustDirExists(dataRoot)
 
 	logger := l.NewFileLoggerWrapper(filepath.Join(dataRoot, "task_log.txt"))
 	logger.GetLogger().SetLevel(l.LevelDebug)
 	logger.Info("new time assist start at:", time.Now())
 
-	metaStorage, _ := kv.NewMemoryFileStorage(filepath.Join(dataRoot, "task_meta"))
+	metaStorage, _ := kv.NewMemoryFileStorageEx(filepath.Join(dataRoot, "task_meta"), false)
 	timer := timeassist.NewTaskTimer(filepath.Join(dataRoot, "task_timer"))
 	taskTimer := timeassist.NewBizTimer(timer)
 
-	taskList := timeassist.NewTaskList(filepath.Join(dataRoot, "task_list"), func(task *timeassist.TaskInfo, visible bool) {})
+	taskList := timeassist.NewTaskList(filepath.Join(dataRoot, "task_list"), func(task *timeassist.TaskInfo, visible bool) {
+		if !visible {
+			return
+		}
+
+		notifyAlarm(logger, cfg.NotifyURL, task)
+	})
 
 	taskManger := timeassist.NewTaskManager(metaStorage, taskTimer, taskList, logger)
 	alarmManager := timeassist.NewAlarmManager(metaStorage, taskTimer, taskList, logger)
@@ -119,13 +142,29 @@ func main() {
 		httpResp(&respWrapper, writer)
 	}).Methods(http.MethodPost)
 
-	s := &http.Server{
-		Addr:        ":11110",
-		Handler:     r,
-		ReadTimeout: time.Second * 5,
+	doNotify(logger, cfg.NotifyURL, "time assist be started")
+
+	fnListen := func(listen string) {
+		srv := &http.Server{
+			Addr:        listen,
+			ReadTimeout: time.Second,
+			Handler:     r,
+		}
+
+		logger.WithFields(l.StringField("listen", listen)).Debug("start listen")
+
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			logger.WithFields(l.ErrorField(err), l.StringField("listen", listen)).Error("listen failed")
+		}
 	}
 
-	_ = s.ListenAndServe()
+	listens := strings.Split(cfg.Listens, " ")
+
+	for idx := 0; idx < len(listens)-1; idx++ {
+		go fnListen(listens[idx])
+	}
+
+	fnListen(listens[len(listens)-1])
 }
 
 //
@@ -279,4 +318,37 @@ func (wr *ResponseWrapper) Apply(code Code, msg string) bool {
 	wr.Message = CodeToMessage(code, msg)
 
 	return code == CodeSuccess
+}
+
+func notifyAlarm(logger l.Wrapper, notifyURL string, task *timeassist.TaskInfo) {
+	if !task.AlarmFlag {
+		return
+	}
+
+	text := fmt.Sprintf("%s %s - %s", task.Value, task.SubTitle, task.AlarmAt.Format("2006-01-02 15:04:05"))
+
+	doNotify(logger, notifyURL, text)
+}
+
+func doNotify(logger l.Wrapper, notifyURL, text string) {
+	go func() {
+		fnSend := func(senderID pkg.SenderID, receiverType pkg.ReceiverType, text string) {
+			code, errMsg := pkg.SendTextMessage(notifyURL, &pkg.TextMessage{
+				SenderID:     senderID,
+				ReceiverType: receiverType,
+				Text:         text,
+			})
+			if code != ptl.CodeSuccess {
+				logger.WithFields(l.StringField("errMsg", errMsg), l.StringField("senderID", string(senderID)),
+					l.IntField("receiverType", int(receiverType)), l.StringField("text", text)).
+					Info("send failed")
+			}
+		}
+
+		fnSend(pkg.SenderIDTelegram, pkg.ReceiverTypeAdminUsers, text)
+		fnSend(pkg.SenderIDTelegram, pkg.ReceiverTypeAdminGroups, text)
+
+		fnSend(pkg.SenderIDWeChat, pkg.ReceiverTypeAdminUsers, text)
+		fnSend(pkg.SenderIDWeChat, pkg.ReceiverTypeAdminGroups, text)
+	}()
 }
