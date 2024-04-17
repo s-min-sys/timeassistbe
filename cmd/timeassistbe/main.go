@@ -19,6 +19,7 @@ import (
 	"github.com/sgostarter/libeasygo/pathutils"
 	"github.com/sgostarter/libeasygo/ptl"
 	"github.com/sgostarter/libeasygo/stg/kv"
+	"golang.org/x/exp/slices"
 )
 
 const (
@@ -324,6 +325,18 @@ func handleGetAlarms(_ *http.Request, t timeassist.TaskTimer, storage kv.Storage
 			AValue:    aValue,
 		})
 	}
+
+	slices.SortFunc(aItems, func(a, b AlarmItem) int {
+		if a.ShowAt < b.ShowAt {
+			return -1
+		}
+
+		if a.ShowAt > b.ShowAt {
+			return 1
+		}
+
+		return 0
+	})
 
 	code = CodeSuccess
 
