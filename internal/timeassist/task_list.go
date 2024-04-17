@@ -3,6 +3,7 @@ package timeassist
 import (
 	"time"
 
+	"github.com/s-min-sys/timeassistbe/internal/utils"
 	uuid "github.com/satori/go.uuid"
 	"github.com/sgostarter/i/commerr"
 	"github.com/sgostarter/libeasygo/stg/kv"
@@ -43,6 +44,9 @@ type TaskInfo struct {
 	//
 	//
 	NotifyID string `json:"notify_id,omitempty"`
+
+	//
+	LeftTimeS string `json:"left_time_s"`
 }
 
 func (taskInfo *TaskInfo) AutoFill() {
@@ -54,6 +58,8 @@ func (taskInfo *TaskInfo) AutoFill() {
 	default:
 		taskInfo.VOTaskType = VOTaskTypeUnknown
 	}
+
+	taskInfo.LeftTimeS = utils.LeftTimeString(taskInfo.AlarmAt)
 }
 
 type TaskInfos []*TaskInfo

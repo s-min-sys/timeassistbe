@@ -14,6 +14,7 @@ import (
 	"github.com/s-min-sys/notifier-share/pkg"
 	"github.com/s-min-sys/timeassistbe/internal/autoimport"
 	"github.com/s-min-sys/timeassistbe/internal/timeassist"
+	"github.com/s-min-sys/timeassistbe/internal/utils"
 	"github.com/sgostarter/i/l"
 	"github.com/sgostarter/libconfig"
 	"github.com/sgostarter/libeasygo/pathutils"
@@ -269,9 +270,10 @@ type AlarmItem struct {
 	ExpireAt  int64  `json:"expire_at"`
 	ExpireAtS string `json:"expire_at_s"`
 
-	Text   string `json:"text"`
-	Value  string `json:"value"`
-	AValue string `json:"a_value"`
+	Text     string `json:"text"`
+	Value    string `json:"value"`
+	AValue   string `json:"a_value"`
+	LeftTime string `json:"left_time"`
 }
 
 func handleGetAlarms(_ *http.Request, t timeassist.TaskTimer, storage kv.StorageTiny) (aItems []AlarmItem, code Code, msg string) {
@@ -323,15 +325,16 @@ func handleGetAlarms(_ *http.Request, t timeassist.TaskTimer, storage kv.Storage
 			Text:      alarm.Text,
 			Value:     alarm.Value,
 			AValue:    aValue,
+			LeftTime:  utils.LeftTimeString(time.Unix(d.Data.EndUTC, 0)),
 		})
 	}
 
 	slices.SortFunc(aItems, func(a, b AlarmItem) int {
-		if a.ShowAt < b.ShowAt {
+		if a.ExpireAt < b.ExpireAt {
 			return -1
 		}
 
-		if a.ShowAt > b.ShowAt {
+		if a.ExpireAt > b.ExpireAt {
 			return 1
 		}
 
