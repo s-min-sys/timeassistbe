@@ -64,10 +64,9 @@ type Task struct {
 }
 
 type TaskData struct {
-	ID       string   `yaml:"ID"`
-	TType    TaskType `yaml:"TType" json:"t_type,omitempty"`
-	StartUTC int64    `yaml:"StartUTC"`
-	EndUTC   int64    `yaml:"EndUTC"`
+	ID       string `yaml:"ID"`
+	StartUTC int64  `yaml:"StartUTC"`
+	EndUTC   int64  `yaml:"EndUTC"`
 }
 
 func (ct *Task) Valid() (err error) {

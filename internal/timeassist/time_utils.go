@@ -1,10 +1,12 @@
 package timeassist
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/6tail/lunar-go/SolarUtil"
 	"github.com/6tail/lunar-go/calendar"
+	"github.com/sgostarter/libeasygo/cuserror"
 )
 
 func MinuteStart(t time.Time) time.Time {
@@ -241,8 +243,77 @@ func ToDateTime(year, month, day, hour, minute, second int, location *time.Locat
 	return time.Date(year, time.Month(month), day, hour, minute, second, 0, location)
 }
 
-func ToLunarDateTime(year, month, day, hour, minute, second int) time.Time {
-	return calendar.NewLunar(year, month, day, hour, minute, second).GetSolar().GetCalendar().In(time.FixedZone("z8", 8*3600))
+func LunarToDateTime(year, month, day, hour, minute, second int) time.Time {
+	solar := calendar.NewLunar(year, month, day, hour, minute, second).GetSolar()
+
+	return time.Date(solar.GetYear(), time.Month(solar.GetMonth()), solar.GetDay(), solar.GetHour(), solar.GetMinute(),
+		solar.GetSecond(), 0, time.FixedZone("z8", 8*3600))
+}
+
+func lunarMonthToDateTime(m *calendar.LunarMonth, lunarDay, hour, minute, second int) (t time.Time, err error) {
+	if m == nil {
+		err = cuserror.NewWithErrorMsg("no m")
+
+		return
+	}
+
+	days := m.GetDayCount()
+
+	if lunarDay < 0 {
+		switch lunarDay {
+		case -1:
+			lunarDay = days
+		case -2:
+			lunarDay = days - 1
+		case -3:
+			lunarDay = days - 2
+		default:
+			err = cuserror.NewWithErrorMsg(fmt.Sprintf("wrong lunar day %v", lunarDay))
+
+			return
+		}
+	}
+
+	if lunarDay < 1 {
+		err = cuserror.NewWithErrorMsg("lunar day must bigger than 0")
+
+		return
+	}
+
+	if lunarDay > days {
+		lunarDay = days
+	}
+
+	t = LunarToDateTime(m.GetYear(), m.GetMonth(), lunarDay, hour, minute, second)
+
+	return
+}
+
+func LunarToDateTimeAndNextYear(lunarYear, lunarMonth, lunarDay, hour, minute, second int, years int) (t time.Time, err error) {
+	y := calendar.NewLunarYear(lunarYear)
+	y = y.Next(years)
+
+	m := y.GetMonth(lunarMonth)
+
+	return lunarMonthToDateTime(m, lunarDay, hour, minute, second)
+}
+
+func LunarToDateTimeAndNextMonth(lunarYear, lunarMonth, lunarDay, hour, minute, second int, months int) (t time.Time, err error) {
+	m := calendar.NewLunarMonthFromYm(lunarYear, lunarMonth)
+	m = m.Next(months)
+
+	return lunarMonthToDateTime(m, lunarDay, hour, minute, second)
+}
+
+func LunarToDateTimeAndNextDay(year, month, day, hour, minute, second int, days int) time.Time {
+	lunar := calendar.NewLunar(year, month, day, hour, minute, second)
+
+	lunar = lunar.Next(days)
+
+	solar := lunar.GetSolar()
+
+	return time.Date(solar.GetYear(), time.Month(solar.GetMonth()), solar.GetDay(), solar.GetHour(), solar.GetMinute(),
+		solar.GetSecond(), 0, time.FixedZone("z8", 8*3600))
 }
 
 func GetDaysOfMonth(year int, month int) int {

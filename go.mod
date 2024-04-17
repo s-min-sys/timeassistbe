@@ -3,7 +3,7 @@ module github.com/s-min-sys/timeassistbe
 go 1.19
 
 require (
-	github.com/6tail/lunar-go v1.2.21
+	github.com/6tail/lunar-go v1.3.11
 	github.com/buger/goterm v1.0.4
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.5.0

@@ -9,10 +9,16 @@ import (
 	"github.com/sgostarter/libeasygo/stg/kv"
 )
 
+type D struct {
+	Data *TaskData
+	At   time.Time
+}
+
 type TaskTimer interface {
 	Start()
 	AddTimer(at time.Time, data *TaskData) error
 	SetCallback(cb Callback)
+	List() (items []D, err error)
 }
 
 // BizTaskTimer 危险 确保 idPre 不重复 且 TaskData 的 ID 符合规则
@@ -80,11 +86,6 @@ func NewTaskTimer(fileName string) TaskTimer {
 	return &taskTimerImpl{
 		storage: storage,
 	}
-}
-
-type D struct {
-	Data *TaskData
-	At   time.Time
 }
 
 type taskTimerImpl struct {
@@ -168,4 +169,26 @@ func (impl *taskTimerImpl) AddTimer(at time.Time, data *TaskData) error {
 
 func (impl *taskTimerImpl) SetCallback(cb Callback) {
 	impl.cb = cb
+}
+
+func (impl *taskTimerImpl) List() (items []D, err error) {
+	ds, err := impl.storage.GetMap(func(key string) interface{} {
+		return &D{}
+	})
+	if err != nil {
+		return
+	}
+
+	items = make([]D, 0, len(ds))
+
+	for _, v := range ds {
+		d, ok := v.(*D)
+		if !ok {
+			continue
+		}
+
+		items = append(items, *d)
+	}
+
+	return
 }

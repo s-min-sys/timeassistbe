@@ -97,7 +97,7 @@ func main() {
 		} else {
 			writer.WriteHeader(http.StatusOK)
 		}
-	}).Methods("POST")
+	}).Methods(http.MethodPost)
 
 	r.HandleFunc("/add/alarm", func(writer http.ResponseWriter, request *http.Request) {
 		var respWrapper ResponseWrapper
@@ -105,7 +105,7 @@ func main() {
 		respWrapper.Apply(handleAddAlarm(request, alarmManager))
 
 		httpResp(&respWrapper, writer)
-	}).Methods("POST")
+	}).Methods(http.MethodPost)
 
 	r.HandleFunc("/remove/alarm", func(writer http.ResponseWriter, request *http.Request) {
 		var respWrapper ResponseWrapper
@@ -113,7 +113,18 @@ func main() {
 		respWrapper.Apply(handleRemoveAlarm(request, alarmManager))
 
 		httpResp(&respWrapper, writer)
-	}).Methods("POST")
+	}).Methods(http.MethodPost)
+
+	r.HandleFunc("/alarms/detail", func(writer http.ResponseWriter, request *http.Request) {
+		var respWrapper ResponseWrapper
+
+		items, code, msg := handleGetAlarms(request, timer, metaStorage)
+		if respWrapper.Apply(code, msg) {
+			respWrapper.Resp = items
+		}
+
+		httpResp(&respWrapper, writer)
+	}).Methods(http.MethodGet)
 
 	r.HandleFunc("/tasks", func(writer http.ResponseWriter, request *http.Request) {
 		var respWrapper ResponseWrapper
@@ -125,6 +136,7 @@ func main() {
 
 		httpResp(&respWrapper, writer)
 	})
+
 	r.HandleFunc("/tasks/{task_id}/done", func(writer http.ResponseWriter, request *http.Request) {
 		_ = taskList.Remove(mux.Vars(request)["task_id"])
 
@@ -134,6 +146,7 @@ func main() {
 
 		httpResp(&respWrapper, writer)
 	})
+
 	r.HandleFunc("/tasks/{task_id}", func(writer http.ResponseWriter, request *http.Request) {
 		var respWrapper ResponseWrapper
 
@@ -238,6 +251,78 @@ func handleRemoveAlarm(request *http.Request, alarmManager timeassist.AlarmManag
 		msg = err.Error()
 
 		return
+	}
+
+	code = CodeSuccess
+
+	return
+}
+
+type AlarmItem struct {
+	ID       string `json:"id"`
+	CheckAt  int64  `json:"check_at"`
+	CheckAtS string `json:"check_at_s"`
+
+	ShowAt    int64  `json:"show_at"`
+	ShowAtS   string `json:"show_at_s"`
+	ExpireAt  int64  `json:"expire_at"`
+	ExpireAtS string `json:"expire_at_s"`
+
+	Text   string `json:"text"`
+	Value  string `json:"value"`
+	AValue string `json:"a_value"`
+}
+
+func handleGetAlarms(_ *http.Request, t timeassist.TaskTimer, storage kv.StorageTiny) (aItems []AlarmItem, code Code, msg string) {
+	items, err := t.List()
+	if err != nil {
+		code = CodeErrInternal
+		msg = err.Error()
+
+		return
+	}
+
+	aItems = make([]AlarmItem, 0, len(items))
+
+	fnFormatTime := func(t time.Time) string {
+		return t.Format("2006-01-02 15:04:05")
+	}
+
+	fnFormatTimeStamp := func(tm int64) string {
+		return fnFormatTime(time.Unix(tm, 0))
+	}
+
+	for _, d := range items {
+		idPre := timeassist.ParsePreOnID(d.Data.ID)
+		if idPre != timeassist.AlarmIDPre {
+			continue
+		}
+
+		alarm := &timeassist.Alarm{}
+
+		ok, e := storage.Get(d.Data.ID, alarm)
+		if e != nil || !ok {
+			continue
+		}
+
+		av, e := timeassist.ParseAlarmValue(alarm.Value, alarm.AType)
+		if e != nil {
+			continue
+		}
+
+		_, aValue := av.StringNoNowTime(alarm.AType)
+		aItems = append(aItems, AlarmItem{
+			ID:        d.Data.ID,
+			CheckAt:   d.At.Unix(),
+			CheckAtS:  fnFormatTime(d.At),
+			ShowAt:    d.Data.StartUTC,
+			ShowAtS:   fnFormatTimeStamp(d.Data.StartUTC),
+			ExpireAt:  d.Data.EndUTC,
+			ExpireAtS: fnFormatTimeStamp(d.Data.EndUTC),
+			Text:      alarm.Text,
+			Value:     alarm.Value,
+			AValue:    aValue,
+		})
 	}
 
 	code = CodeSuccess

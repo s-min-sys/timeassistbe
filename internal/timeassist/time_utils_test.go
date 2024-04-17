@@ -3,6 +3,8 @@ package timeassist
 import (
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestWeekStart(t *testing.T) {
@@ -28,4 +30,36 @@ func TestWeekStart(t *testing.T) {
 	t.Log(LunarYearEndAdd(time.Now(), -1))
 
 	t.Log(IsWorkDay(time.Now()))
+}
+
+func TestLunarToDateTimeAndNextMonth(t *testing.T) {
+	for idx := 0; idx < 20; idx++ {
+		timeAt, err := LunarToDateTimeAndNextMonth(2000, 10, 1, 1, 1, 1, idx)
+		assert.Nil(t, err)
+
+		t.Log(timeAt)
+	}
+}
+
+func TestLunarMulMonth(t *testing.T) {
+	timeAt, err := LunarToDateTimeAndNextMonth(2023, 2, 1, 1, 1, 1, 0)
+	assert.Nil(t, err)
+	t.Log(timeAt)
+
+	timeAt, err = LunarToDateTimeAndNextMonth(2023, 2, 1, 1, 1, 1, 1)
+	assert.Nil(t, err)
+	t.Log(timeAt)
+
+	timeAt, err = LunarToDateTimeAndNextMonth(2023, 3, 1, 1, 1, 1, 0)
+	assert.Nil(t, err)
+	t.Log(timeAt)
+}
+
+func TestToDateTimeAdd(t *testing.T) {
+	month := 10
+
+	for idx := 0; idx < 20; idx++ {
+		timeAt := ToDateTime(2000, month+idx, 1, 1, 1, 1, time.Local)
+		t.Log(timeAt)
+	}
 }

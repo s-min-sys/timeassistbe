@@ -49,7 +49,7 @@ type Alarm struct {
 	//
 	//
 	//
-	TimeLastAt int64 `yaml:"TimeLastAt,omitempty" json:"time_last_at,omitempty"`
+	TimeLastAt int64 `yaml:"TimeLastAt,omitempty" json:"time_last_at,omitempty"` // ？
 }
 
 func (a *Alarm) Validate() (av *AlarmValue, err error) {
@@ -66,6 +66,7 @@ func (a *Alarm) GenRecycleData() (av *AlarmValue, timeAt time.Time, rd *TaskData
 	return a.GenRecycleDataEx(time.Now(), time.Now())
 }
 
+// GenRecycleDataEx
 // nolint: gocyclo
 func (a *Alarm) GenRecycleDataEx(timeNow, timeLastAt time.Time) (av *AlarmValue, timeAt time.Time, rd *TaskData, show, alarm bool, err error) {
 	av, err = a.Validate()
@@ -126,7 +127,7 @@ func (a *Alarm) GenRecycleDataEx(timeNow, timeLastAt time.Time) (av *AlarmValue,
 	switch a.AType {
 	case AlarmTypeOnce:
 		if av.Lunar {
-			timeAt = ToLunarDateTime(av.Year, av.Month, fnFixLunarDayOfMonth(av.Year, av.Month, av.Day), av.Hour, av.Minute, av.Second)
+			timeAt = LunarToDateTime(av.Year, av.Month, fnFixLunarDayOfMonth(av.Year, av.Month, av.Day), av.Hour, av.Minute, av.Second)
 		} else {
 			timeAt = ToDateTime(av.Year, av.Month, fnFixDayOfMonth(av.Year, av.Month, av.Day), av.Hour, av.Minute, av.Second, timeZone)
 		}
@@ -135,12 +136,18 @@ func (a *Alarm) GenRecycleDataEx(timeNow, timeLastAt time.Time) (av *AlarmValue,
 	case RecycleAlarmTypeYear:
 		if av.Lunar {
 			year, _, _ := LunarYMD(timeNow)
+			addYear := 0
+
 		ReCalcLunarYear:
 			day := fnFixLunarDayOfMonth(year, av.Month, av.Day)
 
-			timeAt = ToLunarDateTime(year, av.Month, day, av.Hour, av.Minute, av.Second)
+			timeAt, err = LunarToDateTimeAndNextYear(year, av.Month, day, av.Hour, av.Minute, av.Second, addYear)
+			if err != nil {
+				return
+			}
+
 			if timeAt.Before(timeNow) {
-				year++
+				addYear++
 
 				goto ReCalcLunarYear
 			}
@@ -158,17 +165,22 @@ func (a *Alarm) GenRecycleDataEx(timeNow, timeLastAt time.Time) (av *AlarmValue,
 			}
 		}
 
-		showDuration = time.Hour * 24 * 3
+		showDuration = time.Hour * 24 * 7
 	case RecycleAlarmTypeMonth:
 		if av.Lunar {
 			year, month, _ := LunarYMD(timeNow)
 
+			addMonth := 0
 		ReCalcLunarMonth:
 			day := fnFixLunarDayOfMonth(year, month, av.Day)
 
-			timeAt = ToLunarDateTime(year, month, day, av.Hour, av.Minute, av.Second)
+			timeAt, err = LunarToDateTimeAndNextMonth(year, month, day, av.Hour, av.Minute, av.Second, addMonth)
+			if err != nil {
+				return
+			}
+
 			if timeAt.Before(timeNow) {
-				month++
+				addMonth++
 
 				goto ReCalcLunarMonth
 			}
@@ -187,7 +199,7 @@ func (a *Alarm) GenRecycleDataEx(timeNow, timeLastAt time.Time) (av *AlarmValue,
 			}
 		}
 
-		showDuration = time.Hour * 24
+		showDuration = time.Hour * 24 * 2
 	case RecycleAlarmTypeWeek:
 		timeAt = ToDateTime(timeNow.Year(), int(timeNow.Month()), timeNow.Day(), av.Hour, av.Minute, av.Second, timeNow.Location())
 
@@ -195,7 +207,7 @@ func (a *Alarm) GenRecycleDataEx(timeNow, timeLastAt time.Time) (av *AlarmValue,
 			timeAt = DayAdd(timeAt, 1)
 		}
 
-		showDuration = time.Hour * 2
+		showDuration = time.Hour * 24
 	case RecycleAlarmTypeDay:
 		year := timeNow.Year()
 		month := timeNow.Month()
@@ -258,8 +270,8 @@ func (a *Alarm) GenRecycleDataEx(timeNow, timeLastAt time.Time) (av *AlarmValue,
 
 	timeShow := timeAt.Add(-showDuration)
 
-	rdNow.StartUTC = timeShow.Unix()
-	rdNow.EndUTC = timeAt.Unix()
+	rdNow.StartUTC = timeShow.Unix() // next show at
+	rdNow.EndUTC = timeAt.Unix()     // next expire at
 
 	if a.AType == AlarmTypeOnce {
 		if timeAt.Before(timeNow) {
@@ -298,39 +310,42 @@ type AlarmValue struct {
 	Second int
 }
 
-func (av *AlarmValue) String(aType AlarmType, timeAt time.Time) string {
-	if aType == AlarmTypeOnce {
+func (av *AlarmValue) StringNoNowTime(aType AlarmType) (bool, string) {
+	var days int
+
+	var dayS string
+
+	fnGetDay := func() string {
+		if dayS != "" {
+			return dayS
+		}
+
 		if av.Lunar {
-			var day string
-			if av.Day == -1 {
-				day = fmt.Sprintf("%02d日(最后一天)", GetDaysOfMonth(av.Year, av.Month))
-			} else {
-				day = fmt.Sprintf("%02d日", av.Day)
-			}
-
-			return fmt.Sprintf("阴历%04d年%02d月%s%02d时%02d分%02d秒", av.Year, av.Month, day, av.Hour, av.Minute, av.Second)
-		}
-
-		var day string
-		if av.Day == -1 {
-			day = fmt.Sprintf("%02d日(最后一天)", LunarGetDaysOfMonth(av.Year, av.Month))
+			days = LunarGetDaysOfMonth(av.Year, av.Month)
 		} else {
-			day = fmt.Sprintf("%02d日", av.Day)
+			days = GetDaysOfMonth(av.Year, av.Month)
 		}
 
-		return fmt.Sprintf("%04d年%02d月%s%02d时%02d分%02d秒", av.Year, av.Month, day, av.Hour, av.Minute, av.Second)
+		switch av.Day {
+		case -1:
+			dayS = fmt.Sprintf("%02d日(最后一天)", days)
+		case -2:
+			dayS = fmt.Sprintf("%02d日(倒数第二天)", days)
+		case -3:
+			dayS = fmt.Sprintf("%02d日(倒数第三天)", days)
+		default:
+			dayS = fmt.Sprintf("%02d日", av.Day)
+		}
+
+		return dayS
 	}
 
-	var day string
-
-	if av.Day == -1 {
+	if aType == AlarmTypeOnce {
 		if av.Lunar {
-			day = fmt.Sprintf("%02d日(最后一天)", LunarGetDaysOfMonth(av.Year, av.Month))
-		} else {
-			day = fmt.Sprintf("%02d日(最后一天)", GetDaysOfMonth(av.Year, av.Month))
+			return false, fmt.Sprintf("阴历%04d年%02d月%s%02d时%02d分%02d秒", av.Year, av.Month, fnGetDay(), av.Hour, av.Minute, av.Second)
 		}
-	} else {
-		day = fmt.Sprintf("%02d日", av.Day)
+
+		return false, fmt.Sprintf("%04d年%02d月%s%02d时%02d分%02d秒", av.Year, av.Month, fnGetDay(), av.Hour, av.Minute, av.Second)
 	}
 
 	yx := "阳历"
@@ -342,9 +357,9 @@ func (av *AlarmValue) String(aType AlarmType, timeAt time.Time) string {
 
 	switch aType {
 	case RecycleAlarmTypeYear:
-		pre = yx + fmt.Sprintf("每年%02d月%s%02d时%02d分%02d秒", av.Month, day, av.Hour, av.Minute, av.Second)
+		pre = yx + fmt.Sprintf("每年%02d月%s%02d时%02d分%02d秒", av.Month, fnGetDay(), av.Hour, av.Minute, av.Second)
 	case RecycleAlarmTypeMonth:
-		pre = yx + fmt.Sprintf("每月%s%02d时%02d分%02d秒", day, av.Hour, av.Minute, av.Second)
+		pre = yx + fmt.Sprintf("每月%s%02d时%02d分%02d秒", fnGetDay(), av.Hour, av.Minute, av.Second)
 	case RecycleAlarmTypeWeek:
 		week := fmt.Sprintf("周%d", av.Week)
 		if av.Week == 0 {
@@ -359,10 +374,19 @@ func (av *AlarmValue) String(aType AlarmType, timeAt time.Time) string {
 	case RecycleAlarmTypeMinute:
 		pre = fmt.Sprintf("每分%02d秒", av.Second)
 	default:
-		return ""
+		return true, ""
 	}
 
-	return pre + timeAt.Format("[2006年01月02日15时04分05秒]")
+	return true, pre
+}
+
+func (av *AlarmValue) String(aType AlarmType, timeAt time.Time) string {
+	shouldAppendTime, s := av.StringNoNowTime(aType)
+	if shouldAppendTime {
+		s += timeAt.Format("[2006年01月02日15时04分05秒]")
+	}
+
+	return s
 }
 
 func (av *AlarmValue) Valid(aType AlarmType) bool {
@@ -381,12 +405,14 @@ func (av *AlarmValue) Valid(aType AlarmType) bool {
 		fallthrough
 	case RecycleAlarmTypeWeek, RecycleAlarmTypeMonth:
 		if aType == RecycleAlarmTypeWeek {
-			if av.Week < 0 || av.Week > 5 {
+			if av.Week < 0 || av.Week > 6 {
 				return false
 			}
 		} else {
-			if av.Day < 1 || av.Day > 31 || av.Day == -1 /*last day of month*/ {
-				return false
+			if av.Day != -1 && av.Day != -2 && av.Day != -3 {
+				if av.Day < 1 || av.Day > 31 {
+					return false
+				}
 			}
 		}
 

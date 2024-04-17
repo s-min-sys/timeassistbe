@@ -92,11 +92,11 @@ func Test_parseAlarmValueWeek(t *testing.T) {
 			Year:   0,
 			Month:  0,
 			Day:    0,
-			Week:   3,
+			Week:   0,
 			Hour:   9,
 			Minute: 24,
 			Second: 0,
-		}, utErrIsNil(false)},
+		}, utErrIsNil(true)},
 		{"", args{"192400"}, &AlarmValue{
 			Lunar:  false,
 			Year:   0,
@@ -150,7 +150,6 @@ func TestAlarm_GenRecycleDataEx(t *testing.T) {
 			timeNow: time.Date(2023, 2, 22, 9, 22, 20, 0, tz),
 		}, &TaskData{
 			ID:       "1",
-			TType:    0,
 			StartUTC: time.Date(2023, 2, 22, 9, 21, 22, 0, tz).Unix(),
 			EndUTC:   time.Date(2023, 2, 22, 9, 22, 22, 0, tz).Unix(),
 		}, true},
@@ -164,7 +163,6 @@ func TestAlarm_GenRecycleDataEx(t *testing.T) {
 			timeNow: time.Date(2023, 2, 12, 19, 22, 40, 0, tz),
 		}, &TaskData{
 			ID:       "1",
-			TType:    0,
 			StartUTC: time.Date(2023, 2, 19, 9, 22, 20, 0, tz).Unix(),
 			EndUTC:   time.Date(2023, 2, 22, 9, 22, 20, 0, tz).Unix(),
 		}, false},
@@ -176,12 +174,7 @@ func TestAlarm_GenRecycleDataEx(t *testing.T) {
 			TimeZone: 8,
 		}, args{
 			timeNow: time.Date(2023, 2, 23, 19, 22, 40, 0, tz),
-		}, &TaskData{
-			ID:       "1",
-			TType:    0,
-			StartUTC: 0,
-			EndUTC:   0,
-		}, true},
+		}, nil, true},
 		{"", fields{
 			ID:       "1",
 			AType:    AlarmTypeOnce,
@@ -192,7 +185,6 @@ func TestAlarm_GenRecycleDataEx(t *testing.T) {
 			timeNow: time.Date(2023, 2, 3, 15, 22, 40, 0, tz),
 		}, &TaskData{
 			ID:       "1",
-			TType:    0,
 			StartUTC: time.Date(2023, 2, 19, 9, 22, 20, 0, tz).Unix(),
 			EndUTC:   time.Date(2023, 2, 22, 9, 22, 20, 0, tz).Unix(),
 		}, false},
@@ -206,7 +198,6 @@ func TestAlarm_GenRecycleDataEx(t *testing.T) {
 			timeNow: time.Date(2023, 2, 20, 15, 22, 40, 0, tz),
 		}, &TaskData{
 			ID:       "1",
-			TType:    0,
 			StartUTC: time.Date(2023, 2, 21, 9, 22, 20, 0, tz).Unix(),
 			EndUTC:   time.Date(2023, 2, 22, 9, 22, 20, 0, tz).Unix(),
 		}, false},
@@ -225,8 +216,7 @@ func TestAlarm_GenRecycleDataEx(t *testing.T) {
 			timeNow: time.Date(2023, 2, 20, 15, 22, 40, 0, tz),
 		}, &TaskData{
 			ID:       "1",
-			TType:    0,
-			StartUTC: time.Date(2023, 2, 19, 9, 22, 20, 0, tz).Unix(),
+			StartUTC: time.Date(2023, 2, 15, 9, 22, 20, 0, tz).Unix(),
 			EndUTC:   time.Date(2023, 2, 22, 9, 22, 20, 0, tz).Unix(),
 		}, true},
 		{"", fields{
@@ -239,8 +229,7 @@ func TestAlarm_GenRecycleDataEx(t *testing.T) {
 			timeNow: time.Date(2023, 2, 22, 15, 22, 40, 0, tz),
 		}, &TaskData{
 			ID:       "1",
-			TType:    0,
-			StartUTC: time.Date(2024, 2, 19, 9, 22, 20, 0, tz).Unix(),
+			StartUTC: time.Date(2024, 2, 15, 9, 22, 20, 0, tz).Unix(),
 			EndUTC:   time.Date(2024, 2, 22, 9, 22, 20, 0, tz).Unix(),
 		}, false},
 
@@ -258,7 +247,6 @@ func TestAlarm_GenRecycleDataEx(t *testing.T) {
 			timeNow: time.Date(2023, 2, 20, 15, 22, 40, 0, tz),
 		}, &TaskData{
 			ID:       "1",
-			TType:    0,
 			StartUTC: time.Date(2023, 2, 20, 9, 22, 20, 0, tz).Unix(),
 			EndUTC:   time.Date(2023, 2, 21, 9, 22, 20, 0, tz).Unix(),
 		}, true},
