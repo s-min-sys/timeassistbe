@@ -10,20 +10,20 @@ import (
 )
 
 type D struct {
-	Data *TaskData
+	Data *ShowItem
 	At   time.Time
 }
 
 type TaskTimer interface {
 	Start()
-	AddTimer(at time.Time, data *TaskData) error
+	AddTimer(at time.Time, data *ShowItem) error
 	SetCallback(cb Callback)
 	List() (items []D, err error)
 }
 
-// BizTaskTimer 危险 确保 idPre 不重复 且 TaskData 的 ID 符合规则
+// BizTaskTimer 危险 确保 idPre 不重复 且 ShowItem 的 ID 符合规则
 type BizTaskTimer interface {
-	AddTimer(at time.Time, data *TaskData) error
+	AddTimer(at time.Time, data *ShowItem) error
 	SetCallback(idPre string, cb Callback)
 }
 
@@ -45,7 +45,7 @@ type bizTimerImpl struct {
 	idCheckers    map[string]Callback
 }
 
-func (impl *bizTimerImpl) AddTimer(at time.Time, data *TaskData) error {
+func (impl *bizTimerImpl) AddTimer(at time.Time, data *ShowItem) error {
 	return impl.timer.AddTimer(at, data)
 }
 
@@ -68,7 +68,7 @@ func (impl *bizTimerImpl) checkCallback(id string) Callback {
 	return nil
 }
 
-func (impl *bizTimerImpl) timerCB(dRemoved *TaskData) (at time.Time, data *TaskData, err error) {
+func (impl *bizTimerImpl) timerCB(dRemoved *ShowItem) (at time.Time, data *ShowItem, err error) {
 	cb := impl.checkCallback(dRemoved.ID)
 	if cb == nil {
 		return
@@ -105,7 +105,7 @@ func (impl *taskTimerImpl) check() {
 
 	var at time.Time
 
-	var data *TaskData
+	var data *ShowItem
 
 	for k, v := range ds {
 		d, ok := v.(*D)
@@ -152,7 +152,7 @@ func (impl *taskTimerImpl) Start() {
 	}()
 }
 
-func (impl *taskTimerImpl) AddTimer(at time.Time, data *TaskData) error {
+func (impl *taskTimerImpl) AddTimer(at time.Time, data *ShowItem) error {
 	err := impl.storage.Set(data.ID, &D{
 		Data: data,
 		At:   at,

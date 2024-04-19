@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"path/filepath"
-	"sort"
 	"strings"
 	"time"
 
@@ -50,7 +49,7 @@ func main() {
 	timer := timeassist.NewTaskTimer(filepath.Join(dataRoot, "task_timer"))
 	taskTimer := timeassist.NewBizTimer(timer)
 
-	taskList := timeassist.NewTaskList(filepath.Join(dataRoot, "task_list"), func(task *timeassist.TaskInfo, visible bool) {
+	taskList := timeassist.NewShowList(filepath.Join(dataRoot, "task_list"), func(task *timeassist.ShowInfo, visible bool) {
 		if !visible {
 			return
 		}
@@ -71,7 +70,7 @@ func main() {
 	r.HandleFunc("/add/alarms", func(writer http.ResponseWriter, request *http.Request) {
 		var alarms []timeassist.Alarm
 
-		err := json.NewDecoder(request.Body).Decode(&alarms)
+		err = json.NewDecoder(request.Body).Decode(&alarms)
 		if err != nil {
 			writer.WriteHeader(http.StatusBadRequest)
 
@@ -127,6 +126,15 @@ func main() {
 
 		httpResp(&respWrapper, writer)
 	}).Methods(http.MethodGet)
+
+	//
+	r.HandleFunc("/add/task", func(writer http.ResponseWriter, request *http.Request) {
+		var respWrapper ResponseWrapper
+
+		respWrapper.Apply(handleAddTask(request, taskManger))
+
+		httpResp(&respWrapper, writer)
+	}).Methods(http.MethodPost)
 
 	r.HandleFunc("/tasks", func(writer http.ResponseWriter, request *http.Request) {
 		var respWrapper ResponseWrapper
@@ -196,8 +204,8 @@ func httpResp(respWrapper *ResponseWrapper, writer http.ResponseWriter) {
 	_, _ = writer.Write(d)
 }
 
-func handleGetTasks(taskList timeassist.TaskList) (
-	tasks []*timeassist.TaskInfo, code Code, msg string) {
+func handleGetTasks(taskList timeassist.ShowList) (
+	tasks []*timeassist.ShowInfo, code Code, msg string) {
 	tasks, err := taskList.GetList()
 	if err != nil {
 		code = CodeErrInternal
@@ -207,10 +215,24 @@ func handleGetTasks(taskList timeassist.TaskList) (
 	}
 
 	if tasks == nil {
-		tasks = make([]*timeassist.TaskInfo, 0)
+		tasks = make([]*timeassist.ShowInfo, 0)
 	}
 
-	sort.Stable(timeassist.TaskInfos(tasks))
+	slices.SortFunc(tasks, func(a, b *timeassist.ShowInfo) int {
+		if a.VOTaskType != b.VOTaskType {
+			if a.VOTaskType == timeassist.VOTaskTypeTask {
+				return 1
+			}
+
+			return -1
+		}
+
+		if a.VOTaskType == timeassist.VOTaskTypeTask {
+			return strings.Compare(a.Value, b.Value)
+		}
+
+		return a.AlarmAt.Compare(b.AlarmAt)
+	})
 
 	return
 }
@@ -346,6 +368,30 @@ func handleGetAlarms(_ *http.Request, t timeassist.TaskTimer, storage kv.Storage
 	return
 }
 
+func handleAddTask(request *http.Request, taskManager timeassist.TaskManager) (code Code, msg string) {
+	var task timeassist.Task
+
+	err := json.NewDecoder(request.Body).Decode(&task)
+	if err != nil {
+		code = CodeErrParse
+		msg = err.Error()
+
+		return
+	}
+
+	err = taskManager.Add(&task)
+	if err != nil {
+		code = CodeErrParse
+		msg = err.Error()
+
+		return
+	}
+
+	code = CodeSuccess
+
+	return
+}
+
 //
 //
 //
@@ -421,7 +467,7 @@ func (wr *ResponseWrapper) Apply(code Code, msg string) bool {
 	return code == CodeSuccess
 }
 
-func notifyAlarm(logger l.Wrapper, notifyURL string, task *timeassist.TaskInfo) {
+func notifyAlarm(logger l.Wrapper, notifyURL string, task *timeassist.ShowInfo) {
 	if !task.AlarmFlag {
 		return
 	}

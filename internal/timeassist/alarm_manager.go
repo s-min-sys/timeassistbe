@@ -13,7 +13,7 @@ type AlarmManager interface {
 	Done(id string) error
 }
 
-func NewAlarmManager(storage kv.Storage, timer BizTaskTimer, taskList TaskList, logger l.Wrapper) AlarmManager {
+func NewAlarmManager(storage kv.Storage, timer BizTaskTimer, taskList ShowList, logger l.Wrapper) AlarmManager {
 	if logger == nil {
 		logger = l.NewNopLoggerWrapper()
 	}
@@ -38,7 +38,7 @@ type alarmManagerImpl struct {
 	logger   l.Wrapper
 	storage  kv.Storage
 	timer    BizTaskTimer
-	taskList TaskList
+	taskList ShowList
 }
 
 func (impl *alarmManagerImpl) Add(alarm *Alarm) (err error) {
@@ -61,7 +61,7 @@ func (impl *alarmManagerImpl) Add(alarm *Alarm) (err error) {
 	}
 
 	if show {
-		_ = impl.taskList.Add(&TaskInfo{
+		_ = impl.taskList.Add(&ShowInfo{
 			ID:        alarm.ID,
 			Value:     alarm.Text,
 			SubTitle:  av.String(alarm.AType, timeAt),
@@ -110,7 +110,7 @@ func (impl *alarmManagerImpl) init() {
 	impl.timer.SetCallback(AlarmIDPre, impl.timerCb)
 }
 
-func (impl *alarmManagerImpl) timerCb(dRemoved *TaskData) (at time.Time, data *TaskData, err error) {
+func (impl *alarmManagerImpl) timerCb(dRemoved *ShowItem) (at time.Time, data *ShowItem, err error) {
 	alarm := &Alarm{}
 
 	ok, err := impl.storage.Get(dRemoved.ID, alarm)
@@ -131,7 +131,7 @@ func (impl *alarmManagerImpl) timerCb(dRemoved *TaskData) (at time.Time, data *T
 	}
 
 	if alarmFlag {
-		_ = impl.taskList.Add(&TaskInfo{
+		_ = impl.taskList.Add(&ShowInfo{
 			ID:        alarm.ID,
 			Value:     alarm.Text,
 			SubTitle:  av.String(alarm.AType, timeLastAt) + " - 过期",
@@ -144,7 +144,7 @@ func (impl *alarmManagerImpl) timerCb(dRemoved *TaskData) (at time.Time, data *T
 			data = rd
 		}
 	} else if show {
-		_ = impl.taskList.Add(&TaskInfo{
+		_ = impl.taskList.Add(&ShowInfo{
 			ID:        alarm.ID,
 			Value:     alarm.Text,
 			SubTitle:  av.String(alarm.AType, timeAt),

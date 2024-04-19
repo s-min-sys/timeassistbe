@@ -8,7 +8,7 @@ import (
 )
 
 // Callback 如果data存在， 则其ID必须为dRemoved的ID
-type Callback func(dRemoved *TaskData) (at time.Time, data *TaskData, err error)
+type Callback func(dRemoved *ShowItem) (at time.Time, data *ShowItem, err error)
 
 type TaskManager interface {
 	Add(task *Task) error
@@ -16,7 +16,7 @@ type TaskManager interface {
 	Done(taskID string) error
 }
 
-func NewTaskManager(storage kv.Storage, timer BizTaskTimer, taskList TaskList, logger l.Wrapper) TaskManager {
+func NewTaskManager(storage kv.Storage, timer BizTaskTimer, taskList ShowList, logger l.Wrapper) TaskManager {
 	if logger == nil {
 		logger = l.NewNopLoggerWrapper()
 	}
@@ -29,7 +29,7 @@ func NewTaskManager(storage kv.Storage, timer BizTaskTimer, taskList TaskList, l
 		logger:   logger.WithFields(l.StringField(l.ClsKey, "taskManagerImpl")),
 		storage:  storage,
 		timer:    timer,
-		taskList: taskList,
+		showList: taskList,
 	}
 
 	impl.init()
@@ -41,34 +41,30 @@ type taskManagerImpl struct {
 	logger   l.Wrapper
 	storage  kv.Storage
 	timer    BizTaskTimer
-	taskList TaskList
+	showList ShowList
 }
 
 func (impl *taskManagerImpl) init() {
 	impl.timer.SetCallback(TaskIDPre, impl.timerCb)
 }
 
-func (impl *taskManagerImpl) formatTaskSubTitle(task *Task, taskData *TaskData) string {
+func (impl *taskManagerImpl) formatTaskSubTitle(task *Task, taskData *ShowItem) string {
 	var timeLayout string
 
 	switch task.TType {
-	case RecycleTaskTypeMinutes:
+	case RecycleTimeTypeMinute:
 		timeLayout = "15时04分"
-	case RecycleTaskTypeHours:
+	case RecycleTimeTypeHour:
 		timeLayout = "02号15时"
-	case RecycleTaskTypeDays:
+	case RecycleTimeTypeDay:
 		timeLayout = "01月02号"
-	case RecycleTaskTypeWeeks:
+	case RecycleTimeTypeWeek:
 		timeLayout = "01月02号[Mon]"
-	case RecycleTaskTypeMonths:
+	case RecycleTimeTypeMonth:
 		timeLayout = "2006年01月02号" // nolint: goconst
-	case RecycleTaskTypeLunarMonths:
+	case RecycleTimeTypeYear:
 		timeLayout = "2006年01月02号" // nolint: goconst
-	case RecycleTaskTypeYears:
-		timeLayout = "2006年01月02号" // nolint: goconst
-	case RecycleTaskTypeLunarYears:
-		timeLayout = "2006年01月02号" // nolint: goconst
-	case OnceTask:
+	case TimeTypeOnce:
 		return ""
 	}
 
@@ -76,8 +72,8 @@ func (impl *taskManagerImpl) formatTaskSubTitle(task *Task, taskData *TaskData) 
 		time.Unix(taskData.EndUTC, 0).Format(timeLayout)
 }
 
-func (impl *taskManagerImpl) timerCb(dRemoved *TaskData) (at time.Time, data *TaskData, err error) {
-	_ = impl.taskList.Remove(dRemoved.ID)
+func (impl *taskManagerImpl) timerCb(dRemoved *ShowItem) (at time.Time, data *ShowItem, err error) {
+	_ = impl.showList.Remove(dRemoved.ID)
 
 	task := &Task{}
 
@@ -88,7 +84,7 @@ func (impl *taskManagerImpl) timerCb(dRemoved *TaskData) (at time.Time, data *Ta
 
 	rd, nowIsValid := task.GenRecycleDataEx(time.Unix(dRemoved.EndUTC, 0))
 	if nowIsValid {
-		_ = impl.taskList.Add(&TaskInfo{
+		_ = impl.showList.Add(&ShowInfo{
 			ID:       task.ID,
 			Value:    task.Text,
 			SubTitle: impl.formatTaskSubTitle(task, rd),
@@ -132,8 +128,8 @@ func (impl *taskManagerImpl) Add(task *Task) (err error) {
 		return
 	}
 
-	if task.TType == OnceTask {
-		err = impl.taskList.Add(&TaskInfo{
+	if task.TType == TimeTypeOnce {
+		err = impl.showList.Add(&ShowInfo{
 			ID:       task.ID,
 			Value:    task.Text,
 			SubTitle: "单次任务",
@@ -147,7 +143,7 @@ func (impl *taskManagerImpl) Add(task *Task) (err error) {
 
 	rd, nowIsValid := task.GenRecycleData()
 	if nowIsValid {
-		err = impl.taskList.Add(&TaskInfo{
+		err = impl.showList.Add(&ShowInfo{
 			ID:       task.ID,
 			Value:    task.Text,
 			SubTitle: impl.formatTaskSubTitle(task, rd),
@@ -167,7 +163,7 @@ func (impl *taskManagerImpl) Add(task *Task) (err error) {
 
 	if err != nil {
 		_ = impl.storage.Del(task.ID)
-		_ = impl.taskList.Remove(task.ID)
+		_ = impl.showList.Remove(task.ID)
 
 		return
 	}
@@ -176,11 +172,11 @@ func (impl *taskManagerImpl) Add(task *Task) (err error) {
 }
 
 func (impl *taskManagerImpl) Done(taskID string) error {
-	return impl.taskList.Remove(taskID)
+	return impl.showList.Remove(taskID)
 }
 
 func (impl *taskManagerImpl) Remove(taskID string) error {
-	_ = impl.taskList.Remove(taskID)
+	_ = impl.showList.Remove(taskID)
 	_ = impl.storage.Del(taskID)
 
 	return nil

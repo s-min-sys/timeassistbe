@@ -9,33 +9,19 @@ import (
 	"github.com/sgostarter/i/commerr"
 )
 
-type AlarmType int
-
-const (
-	AlarmTypeBegin AlarmType = iota
-	AlarmTypeOnce
-	RecycleAlarmTypeYear
-	RecycleAlarmTypeMonth
-	RecycleAlarmTypeWeek
-	RecycleAlarmTypeDay
-	RecycleAlarmTypeHour
-	RecycleAlarmTypeMinute
-	AlarmTypeEnd
-)
-
 /* AlarmValue
-L[S]20230222092218 [阴阳年月日时分秒] AlarmTypeOnce/AlarmTypeLunarOnce | ? 分
-L[S]0222092420 [月日时分秒] RecycleAlarmTypeYear/RecycleAlarmTypeLunarYear | 3 * 24 * 60 分
-L[S]22092400 [日时分秒] RecycleAlarmTypeMonth/RecycleAlarmTypeLunarMonth | 24 * 60 分
-3092400[周时分秒] RecycleAlarmTypeWeek | 24 * 60 分
-092812[时分秒] RecycleAlarmTypeDay | 60 分
-2912[分秒] RecycleAlarmTypeHour | 5分
-23[秒] RecycleAlarmTypeMinute | 0 分
+L[S]20230222092218 [阴阳年月日时分秒] TimeTypeOnce/AlarmTypeLunarOnce | ? 分
+L[S]0222092420 [月日时分秒] RecycleTimeTypeYear/RecycleAlarmTypeLunarYear | 3 * 24 * 60 分
+L[S]22092400 [日时分秒] RecycleTimeTypeMonth/RecycleAlarmTypeLunarMonth | 24 * 60 分
+3092400[周时分秒] RecycleTimeTypeWeek | 24 * 60 分
+092812[时分秒] RecycleTimeTypeDay | 60 分
+2912[分秒] RecycleTimeTypeHour | 5分
+23[秒] RecycleTimeTypeMinute | 0 分
 */
 
 type Alarm struct {
-	ID    string    `yaml:"ID" json:"id,omitempty"`
-	AType AlarmType `yaml:"AType,omitempty" json:"a_type,omitempty"`
+	ID    string   `yaml:"ID" json:"id,omitempty"`
+	AType TimeType `yaml:"AType,omitempty" json:"a_type,omitempty"`
 
 	Text string `yaml:"Text" json:"text,omitempty"`
 
@@ -62,19 +48,19 @@ func (a *Alarm) Validate() (av *AlarmValue, err error) {
 	return
 }
 
-func (a *Alarm) GenRecycleData() (av *AlarmValue, timeAt time.Time, rd *TaskData, show, alarm bool, err error) {
+func (a *Alarm) GenRecycleData() (av *AlarmValue, timeAt time.Time, rd *ShowItem, show, alarm bool, err error) {
 	return a.GenRecycleDataEx(time.Now(), time.Now())
 }
 
 // GenRecycleDataEx
 // nolint: gocyclo
-func (a *Alarm) GenRecycleDataEx(timeNow, timeLastAt time.Time) (av *AlarmValue, timeAt time.Time, rd *TaskData, show, alarm bool, err error) {
+func (a *Alarm) GenRecycleDataEx(timeNow, timeLastAt time.Time) (av *AlarmValue, timeAt time.Time, rd *ShowItem, show, alarm bool, err error) {
 	av, err = a.Validate()
 	if err != nil {
 		return
 	}
 
-	rdNow := &TaskData{
+	rdNow := &ShowItem{
 		ID: a.ID,
 	}
 
@@ -125,7 +111,7 @@ func (a *Alarm) GenRecycleDataEx(timeNow, timeLastAt time.Time) (av *AlarmValue,
 	}
 
 	switch a.AType {
-	case AlarmTypeOnce:
+	case TimeTypeOnce:
 		if av.Lunar {
 			timeAt = LunarToDateTime(av.Year, av.Month, fnFixLunarDayOfMonth(av.Year, av.Month, av.Day), av.Hour, av.Minute, av.Second)
 		} else {
@@ -133,7 +119,7 @@ func (a *Alarm) GenRecycleDataEx(timeNow, timeLastAt time.Time) (av *AlarmValue,
 		}
 
 		showDuration = fnCalcDynamicDuration(timeNow, timeAt)
-	case RecycleAlarmTypeYear:
+	case RecycleTimeTypeYear:
 		if av.Lunar {
 			year, _, _ := LunarYMD(timeNow)
 			addYear := 0
@@ -166,7 +152,7 @@ func (a *Alarm) GenRecycleDataEx(timeNow, timeLastAt time.Time) (av *AlarmValue,
 		}
 
 		showDuration = time.Hour * 24 * 7
-	case RecycleAlarmTypeMonth:
+	case RecycleTimeTypeMonth:
 		if av.Lunar {
 			year, month, _ := LunarYMD(timeNow)
 
@@ -200,7 +186,7 @@ func (a *Alarm) GenRecycleDataEx(timeNow, timeLastAt time.Time) (av *AlarmValue,
 		}
 
 		showDuration = time.Hour * 24 * 2
-	case RecycleAlarmTypeWeek:
+	case RecycleTimeTypeWeek:
 		timeAt = ToDateTime(timeNow.Year(), int(timeNow.Month()), timeNow.Day(), av.Hour, av.Minute, av.Second, timeNow.Location())
 
 		for int(timeAt.Weekday()) != av.Week || timeAt.Before(timeNow) {
@@ -208,7 +194,7 @@ func (a *Alarm) GenRecycleDataEx(timeNow, timeLastAt time.Time) (av *AlarmValue,
 		}
 
 		showDuration = time.Hour * 24
-	case RecycleAlarmTypeDay:
+	case RecycleTimeTypeDay:
 		year := timeNow.Year()
 		month := timeNow.Month()
 		day := timeNow.Day()
@@ -223,7 +209,7 @@ func (a *Alarm) GenRecycleDataEx(timeNow, timeLastAt time.Time) (av *AlarmValue,
 		}
 
 		showDuration = time.Hour
-	case RecycleAlarmTypeHour:
+	case RecycleTimeTypeHour:
 		year := timeNow.Year()
 		month := timeNow.Month()
 		day := timeNow.Day()
@@ -239,7 +225,7 @@ func (a *Alarm) GenRecycleDataEx(timeNow, timeLastAt time.Time) (av *AlarmValue,
 		}
 
 		showDuration = time.Minute * 5
-	case RecycleAlarmTypeMinute:
+	case RecycleTimeTypeMinute:
 		year := timeNow.Year()
 		month := timeNow.Month()
 		day := timeNow.Day()
@@ -273,7 +259,7 @@ func (a *Alarm) GenRecycleDataEx(timeNow, timeLastAt time.Time) (av *AlarmValue,
 	rdNow.StartUTC = timeShow.Unix() // next show at
 	rdNow.EndUTC = timeAt.Unix()     // next expire at
 
-	if a.AType == AlarmTypeOnce {
+	if a.AType == TimeTypeOnce {
 		if timeAt.Before(timeNow) {
 			show = true
 			alarm = true
@@ -310,7 +296,7 @@ type AlarmValue struct {
 	Second int
 }
 
-func (av *AlarmValue) StringNoNowTime(aType AlarmType) (bool, string) {
+func (av *AlarmValue) StringNoNowTime(aType TimeType) (bool, string) {
 	var days int
 
 	var dayS string
@@ -340,7 +326,7 @@ func (av *AlarmValue) StringNoNowTime(aType AlarmType) (bool, string) {
 		return dayS
 	}
 
-	if aType == AlarmTypeOnce {
+	if aType == TimeTypeOnce {
 		if av.Lunar {
 			return false, fmt.Sprintf("阴历%04d年%02d月%s%02d时%02d分%02d秒", av.Year, av.Month, fnGetDay(), av.Hour, av.Minute, av.Second)
 		}
@@ -356,22 +342,22 @@ func (av *AlarmValue) StringNoNowTime(aType AlarmType) (bool, string) {
 	var pre string
 
 	switch aType {
-	case RecycleAlarmTypeYear:
+	case RecycleTimeTypeYear:
 		pre = yx + fmt.Sprintf("每年%02d月%s%02d时%02d分%02d秒", av.Month, fnGetDay(), av.Hour, av.Minute, av.Second)
-	case RecycleAlarmTypeMonth:
+	case RecycleTimeTypeMonth:
 		pre = yx + fmt.Sprintf("每月%s%02d时%02d分%02d秒", fnGetDay(), av.Hour, av.Minute, av.Second)
-	case RecycleAlarmTypeWeek:
+	case RecycleTimeTypeWeek:
 		week := fmt.Sprintf("周%d", av.Week)
 		if av.Week == 0 {
 			week = "周日"
 		}
 
 		pre = fmt.Sprintf("每周周%s%02d时%02d分%02d秒", week, av.Hour, av.Minute, av.Second)
-	case RecycleAlarmTypeDay:
+	case RecycleTimeTypeDay:
 		pre = fmt.Sprintf("每日%02d时%02d分%02d秒", av.Hour, av.Minute, av.Second)
-	case RecycleAlarmTypeHour:
+	case RecycleTimeTypeHour:
 		pre = fmt.Sprintf("每小时%02d分%02d秒", av.Minute, av.Second)
-	case RecycleAlarmTypeMinute:
+	case RecycleTimeTypeMinute:
 		pre = fmt.Sprintf("每分%02d秒", av.Second)
 	default:
 		return true, ""
@@ -380,7 +366,7 @@ func (av *AlarmValue) StringNoNowTime(aType AlarmType) (bool, string) {
 	return true, pre
 }
 
-func (av *AlarmValue) String(aType AlarmType, timeAt time.Time) string {
+func (av *AlarmValue) String(aType TimeType, timeAt time.Time) string {
 	shouldAppendTime, s := av.StringNoNowTime(aType)
 	if shouldAppendTime {
 		s += timeAt.Format("[2006年01月02日15时04分05秒]")
@@ -389,22 +375,22 @@ func (av *AlarmValue) String(aType AlarmType, timeAt time.Time) string {
 	return s
 }
 
-func (av *AlarmValue) Valid(aType AlarmType) bool {
+func (av *AlarmValue) Valid(aType TimeType) bool {
 	switch aType {
-	case AlarmTypeOnce:
+	case TimeTypeOnce:
 		if av.Year <= 0 {
 			return false
 		}
 
 		fallthrough
-	case RecycleAlarmTypeYear:
+	case RecycleTimeTypeYear:
 		if av.Month < 1 || av.Month > 12 {
 			return false
 		}
 
 		fallthrough
-	case RecycleAlarmTypeWeek, RecycleAlarmTypeMonth:
-		if aType == RecycleAlarmTypeWeek {
+	case RecycleTimeTypeWeek, RecycleTimeTypeMonth:
+		if aType == RecycleTimeTypeWeek {
 			if av.Week < 0 || av.Week > 6 {
 				return false
 			}
@@ -417,19 +403,19 @@ func (av *AlarmValue) Valid(aType AlarmType) bool {
 		}
 
 		fallthrough
-	case RecycleAlarmTypeDay:
+	case RecycleTimeTypeDay:
 		if av.Hour < 0 || av.Hour > 23 {
 			return false
 		}
 
 		fallthrough
-	case RecycleAlarmTypeHour:
+	case RecycleTimeTypeHour:
 		if av.Minute < 0 || av.Minute > 59 {
 			return false
 		}
 
 		fallthrough
-	case RecycleAlarmTypeMinute:
+	case RecycleTimeTypeMinute:
 		if av.Second < 0 || av.Second > 59 {
 			return false
 		}
@@ -440,21 +426,21 @@ func (av *AlarmValue) Valid(aType AlarmType) bool {
 	return false
 }
 
-func ParseAlarmValue(value string, aType AlarmType) (av *AlarmValue, err error) {
+func ParseAlarmValue(value string, aType TimeType) (av *AlarmValue, err error) {
 	switch aType {
-	case AlarmTypeOnce:
+	case TimeTypeOnce:
 		av, err = parseAlarmValueOnce(value)
-	case RecycleAlarmTypeYear:
+	case RecycleTimeTypeYear:
 		av, err = parseAlarmValueYear(value)
-	case RecycleAlarmTypeMonth:
+	case RecycleTimeTypeMonth:
 		av, err = parseAlarmValueMonth(value)
-	case RecycleAlarmTypeWeek:
+	case RecycleTimeTypeWeek:
 		av, err = parseAlarmValueWeek(value)
-	case RecycleAlarmTypeDay:
+	case RecycleTimeTypeDay:
 		av, err = parseAlarmValueDay(value)
-	case RecycleAlarmTypeHour:
+	case RecycleTimeTypeHour:
 		av, err = parseAlarmValueHour(value)
-	case RecycleAlarmTypeMinute:
+	case RecycleTimeTypeMinute:
 		av, err = parseAlarmValueMinute(value)
 	default:
 		err = commerr.ErrUnimplemented
@@ -497,7 +483,7 @@ func parseAlarmValueOnce(value string) (av *AlarmValue, err error) {
 	av.Lunar = lunar == "L"
 	av.Year = year
 
-	if !av.Valid(AlarmTypeOnce) {
+	if !av.Valid(TimeTypeOnce) {
 		err = commerr.ErrBadFormat
 	}
 
@@ -538,7 +524,7 @@ func parseAlarmValueYear(value string) (av *AlarmValue, err error) {
 	av.Lunar = lunar == "L"
 	av.Month = month
 
-	if !av.Valid(RecycleAlarmTypeYear) {
+	if !av.Valid(RecycleTimeTypeYear) {
 		err = commerr.ErrBadFormat
 	}
 
@@ -579,7 +565,7 @@ func parseAlarmValueMonth(value string) (av *AlarmValue, err error) {
 	av.Lunar = lunar == "L"
 	av.Day = day
 
-	if !av.Valid(RecycleAlarmTypeMonth) {
+	if !av.Valid(RecycleTimeTypeMonth) {
 		err = commerr.ErrBadFormat
 	}
 
@@ -606,7 +592,7 @@ func parseAlarmValueWeek(value string) (av *AlarmValue, err error) {
 
 	av.Week = week
 
-	if !av.Valid(RecycleAlarmTypeWeek) {
+	if !av.Valid(RecycleTimeTypeWeek) {
 		err = commerr.ErrBadFormat
 	}
 
@@ -633,7 +619,7 @@ func parseAlarmValueDay(value string) (av *AlarmValue, err error) {
 
 	av.Hour = hour
 
-	if !av.Valid(RecycleAlarmTypeDay) {
+	if !av.Valid(RecycleTimeTypeDay) {
 		err = commerr.ErrBadFormat
 	}
 
@@ -660,7 +646,7 @@ func parseAlarmValueHour(value string) (av *AlarmValue, err error) {
 
 	av.Minute = minute
 
-	if !av.Valid(RecycleAlarmTypeHour) {
+	if !av.Valid(RecycleTimeTypeHour) {
 		err = commerr.ErrBadFormat
 	}
 
@@ -684,7 +670,7 @@ func parseAlarmValueMinute(value string) (av *AlarmValue, err error) {
 		Second: second,
 	}
 
-	if !av.Valid(RecycleAlarmTypeMinute) {
+	if !av.Valid(RecycleTimeTypeMinute) {
 		err = commerr.ErrBadFormat
 	}
 

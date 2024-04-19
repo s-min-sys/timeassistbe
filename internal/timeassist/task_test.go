@@ -14,7 +14,7 @@ import (
 // nolint
 func TestGenRecycleTaskYaml(t *testing.T) {
 	rt := &Task{
-		TType:    RecycleTaskTypeMinutes,
+		TType:    RecycleTimeTypeMinute,
 		Value:    10,
 		Auto:     true,
 		TimeZone: 8,
@@ -93,7 +93,7 @@ func TestRecycleTask1(t *testing.T) {
 	}
 
 	ct := &Task{
-		TType:     RecycleTaskTypeMinutes,
+		TType:     RecycleTimeTypeMinute,
 		Value:     10,
 		Auto:      false,
 		TimeZone:  8,
@@ -223,7 +223,7 @@ func TestRecycleTask2(t *testing.T) {
 	}
 
 	ct := &Task{
-		TType:     RecycleTaskTypeHours,
+		TType:     RecycleTimeTypeHour,
 		Value:     3,
 		Auto:      false,
 		TimeZone:  8,

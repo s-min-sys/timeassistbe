@@ -17,7 +17,7 @@ const (
 	VOTaskTypeAlarm
 )
 
-type TaskInfo struct {
+type ShowInfo struct {
 	ID    string `json:"id"`
 	Value string `json:"value"`
 
@@ -49,57 +49,51 @@ type TaskInfo struct {
 	LeftTimeS string `json:"left_time_s"`
 }
 
-func (taskInfo *TaskInfo) AutoFill() {
-	switch ParsePreOnID(taskInfo.ID) {
+func (showInfo *ShowInfo) AutoFill() {
+	switch ParsePreOnID(showInfo.ID) {
 	case TaskIDPre:
-		taskInfo.VOTaskType = VOTaskTypeTask
+		showInfo.VOTaskType = VOTaskTypeTask
+		showInfo.LeftTimeS = ""
 	case AlarmIDPre:
-		taskInfo.VOTaskType = VOTaskTypeAlarm
+		showInfo.VOTaskType = VOTaskTypeAlarm
+		showInfo.LeftTimeS = utils.LeftTimeString(showInfo.AlarmAt)
 	default:
-		taskInfo.VOTaskType = VOTaskTypeUnknown
+		showInfo.VOTaskType = VOTaskTypeUnknown
 	}
-
-	taskInfo.LeftTimeS = utils.LeftTimeString(taskInfo.AlarmAt)
 }
 
-type TaskInfos []*TaskInfo
+type ShowInfoListChangeObserver func(task *ShowInfo, visible bool)
 
-func (s TaskInfos) Len() int           { return len(s) }
-func (s TaskInfos) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
-func (s TaskInfos) Less(i, j int) bool { return s[i].Value < s[j].Value }
-
-type TaskListChangeObserver func(task *TaskInfo, visible bool)
-
-type TaskList interface {
-	SetOb(ob TaskListChangeObserver) error
-	Add(taskInfo *TaskInfo) error // 如果存在，也不要返回错误
-	Get(taskID string) (taskInfo *TaskInfo, err error)
+type ShowList interface {
+	SetOb(ob ShowInfoListChangeObserver) error
+	Add(taskInfo *ShowInfo) error // 如果存在，也不要返回错误
+	Get(taskID string) (taskInfo *ShowInfo, err error)
 	Remove(taskID string) error // 如果不存在，也不要返回错误
-	GetList() ([]*TaskInfo, error)
+	GetList() ([]*ShowInfo, error)
 }
 
-func NewTaskList(fileName string, ob TaskListChangeObserver) TaskList {
+func NewShowList(fileName string, ob ShowInfoListChangeObserver) ShowList {
 	storage, err := kv.NewMemoryFileStorageEx(fileName, false)
 	if err != nil {
 		return nil
 	}
 
-	return &taskListImpl{
+	return &showListImpl{
 		storage:        storage,
 		changeObserver: ob,
 	}
 }
 
-type taskListImpl struct {
+type showListImpl struct {
 	storage        kv.StorageTiny
-	changeObserver TaskListChangeObserver
+	changeObserver ShowInfoListChangeObserver
 }
 
-func (impl *taskListImpl) SetOb(_ TaskListChangeObserver) error {
+func (impl *showListImpl) SetOb(_ ShowInfoListChangeObserver) error {
 	return commerr.ErrUnavailable
 }
 
-func (impl *taskListImpl) Add(taskInfo *TaskInfo) (err error) {
+func (impl *showListImpl) Add(taskInfo *ShowInfo) (err error) {
 	if taskInfo == nil || taskInfo.ID == "" {
 		err = commerr.ErrInvalidArgument
 
@@ -108,7 +102,7 @@ func (impl *taskListImpl) Add(taskInfo *TaskInfo) (err error) {
 
 	taskInfo.AutoFill()
 
-	var taskInfoOld TaskInfo
+	var taskInfoOld ShowInfo
 
 	ok, err := impl.storage.Get(taskInfo.ID, &taskInfoOld)
 	if err != nil {
@@ -125,7 +119,7 @@ func (impl *taskListImpl) Add(taskInfo *TaskInfo) (err error) {
 		taskInfo.NotifyID = taskInfoOld.NotifyID
 
 		if impl.changeObserver != nil {
-			impl.changeObserver(&TaskInfo{
+			impl.changeObserver(&ShowInfo{
 				ID:    taskInfoOld.ID,
 				Value: taskInfoOld.Value,
 			}, false)
@@ -142,13 +136,16 @@ func (impl *taskListImpl) Add(taskInfo *TaskInfo) (err error) {
 	}
 
 	tmpTaskInfo := *taskInfo
-	impl.changeObserver(&tmpTaskInfo, true)
+
+	if impl.changeObserver != nil {
+		impl.changeObserver(&tmpTaskInfo, true)
+	}
 
 	return
 }
 
-func (impl *taskListImpl) Get(taskID string) (taskInfo *TaskInfo, err error) {
-	taskInfo = &TaskInfo{}
+func (impl *showListImpl) Get(taskID string) (taskInfo *ShowInfo, err error) {
+	taskInfo = &ShowInfo{}
 
 	ok, err := impl.storage.Get(taskID, taskInfo)
 	if err != nil {
@@ -162,8 +159,8 @@ func (impl *taskListImpl) Get(taskID string) (taskInfo *TaskInfo, err error) {
 	return
 }
 
-func (impl *taskListImpl) Remove(taskID string) (err error) {
-	var taskInfo TaskInfo
+func (impl *showListImpl) Remove(taskID string) (err error) {
+	var taskInfo ShowInfo
 
 	ok, err := impl.storage.Get(taskID, &taskInfo)
 	if err != nil {
@@ -180,7 +177,7 @@ func (impl *taskListImpl) Remove(taskID string) (err error) {
 	}
 
 	if impl.changeObserver != nil {
-		impl.changeObserver(&TaskInfo{
+		impl.changeObserver(&ShowInfo{
 			ID:    taskID,
 			Value: taskInfo.Value,
 		}, false)
@@ -189,16 +186,16 @@ func (impl *taskListImpl) Remove(taskID string) (err error) {
 	return
 }
 
-func (impl *taskListImpl) GetList() (tasks []*TaskInfo, err error) {
+func (impl *showListImpl) GetList() (tasks []*ShowInfo, err error) {
 	ds, err := impl.storage.GetList(func(key string) interface{} {
-		return &TaskInfo{}
+		return &ShowInfo{}
 	})
 	if err != nil {
 		return
 	}
 
 	for _, d := range ds {
-		taskInfo, ok := d.(*TaskInfo)
+		taskInfo, ok := d.(*ShowInfo)
 		if !ok {
 			continue
 		}

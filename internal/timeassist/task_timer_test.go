@@ -31,20 +31,20 @@ func TestNewRecycleTaskTimer(t *testing.T) {
 
 	timer := NewTaskTimer(utTestTimerFile)
 
-	timer.SetCallback(func(dRemoved *TaskData) (at time.Time, data *TaskData, err error) {
+	timer.SetCallback(func(dRemoved *ShowItem) (at time.Time, data *ShowItem, err error) {
 		t.Log("timeNow:", time.Now(), ", data", dRemoved)
 
 		return
 	})
 
-	err := timer.AddTimer(time.Now().Add(time.Minute), &TaskData{
+	err := timer.AddTimer(time.Now().Add(time.Minute), &ShowItem{
 		ID:       "1",
 		StartUTC: time.Now().Unix(),
 		EndUTC:   time.Now().Add(time.Second * 40).Unix(),
 	})
 	assert.Nil(t, err)
 
-	err = timer.AddTimer(time.Now().Add(time.Second*10), &TaskData{
+	err = timer.AddTimer(time.Now().Add(time.Second*10), &ShowItem{
 		ID:       "2",
 		StartUTC: time.Now().Unix(),
 		EndUTC:   time.Now().Add(time.Second * 40).Unix(),

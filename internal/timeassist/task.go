@@ -5,50 +5,10 @@ import (
 	"time"
 )
 
-type TaskType int
-
-const (
-	TaskTypeBegin TaskType = iota
-	RecycleTaskTypeMinutes
-	RecycleTaskTypeHours
-	RecycleTaskTypeDays
-	RecycleTaskTypeWeeks
-	RecycleTaskTypeMonths
-	RecycleTaskTypeLunarMonths
-	RecycleTaskTypeYears
-	RecycleTaskTypeLunarYears
-	OnceTask
-	TaskTypeEnd
-)
-
-func (o TaskType) String() string {
-	switch o {
-	case RecycleTaskTypeMinutes:
-		return "RecycleTaskTypeMinutes"
-	case RecycleTaskTypeHours:
-		return "RecycleTaskTypeHours"
-	case RecycleTaskTypeDays:
-		return "RecycleTaskTypeDays"
-	case RecycleTaskTypeWeeks:
-		return "RecycleTaskTypeWeeks"
-	case RecycleTaskTypeMonths:
-		return "RecycleTaskTypeMonths"
-	case RecycleTaskTypeLunarMonths:
-		return "RecycleTaskTypeLunarMonths"
-	case RecycleTaskTypeYears:
-		return "RecycleTaskTypeYears"
-	case RecycleTaskTypeLunarYears:
-		return "RecycleTaskTypeLunarYears"
-	case OnceTask:
-		return "OnceTask"
-	}
-
-	return "RecycleTaskTypUnknown"
-}
-
 type Task struct {
-	ID    string   `yaml:"ID" json:"id,omitempty"`
-	TType TaskType `yaml:"TType,omitempty" json:"t_type,omitempty"`
+	ID        string   `yaml:"ID" json:"id,omitempty"`
+	TType     TimeType `yaml:"TType,omitempty" json:"t_type,omitempty"`
+	LunarFlag bool     `yaml:"lunar_flag" json:"lunar_flag"`
 
 	Text string `yaml:"Text" json:"text,omitempty"`
 
@@ -59,24 +19,18 @@ type Task struct {
 	Value int  `yaml:"Value,omitempty" json:"value,omitempty"`
 	Auto  bool `yaml:"Auto,omitempty" json:"auto,omitempty"`
 
-	TimeZone  int        `yaml:"TimeZone,omitempty" json:"timeZone,omitempty"`
+	TimeZone  int        `yaml:"TimeZone,omitempty" json:"time_zone,omitempty"`
 	ValidTime *ValidTime `yaml:"ValidRanges,omitempty" json:"valid_time,omitempty"`
-}
-
-type TaskData struct {
-	ID       string `yaml:"ID"`
-	StartUTC int64  `yaml:"StartUTC"`
-	EndUTC   int64  `yaml:"EndUTC"`
 }
 
 func (ct *Task) Valid() (err error) {
 	err = os.ErrInvalid
 
-	if ct.ID == "" || ct.TType <= TaskTypeBegin || ct.TType >= TaskTypeEnd || ct.Text == "" {
+	if ct.ID == "" || ct.TType <= TimeTypeBegin || ct.TType >= TimeTypeEnd || ct.Text == "" {
 		return
 	}
 
-	if ct.TType != OnceTask {
+	if ct.TType != TimeTypeOnce {
 		if ct.Value <= 0 {
 			return
 		}
@@ -87,10 +41,10 @@ func (ct *Task) Valid() (err error) {
 	return
 }
 
-func (ct *Task) GenRecycleData() (rd *TaskData, nowIsValid bool) {
+func (ct *Task) GenRecycleData() (rd *ShowItem, nowIsValid bool) {
 	return ct.GenRecycleDataEx(time.Now())
 }
-func (ct *Task) GenRecycleDataEx(timeNow time.Time) (rd *TaskData, nowIsValid bool) {
+func (ct *Task) GenRecycleDataEx(timeNow time.Time) (rd *ShowItem, nowIsValid bool) {
 	rd, nowIsValid = ct.genRecycleDataEx(timeNow)
 	if rd.EndUTC > time.Now().Unix() {
 		return
@@ -108,8 +62,8 @@ func (ct *Task) GenRecycleDataEx(timeNow time.Time) (rd *TaskData, nowIsValid bo
 	return
 }
 
-func (ct *Task) genRecycleDataEx(timeNow time.Time) (rd *TaskData, nowIsValid bool) {
-	rd = &TaskData{
+func (ct *Task) genRecycleDataEx(timeNow time.Time) (rd *ShowItem, nowIsValid bool) {
+	rd = &ShowItem{
 		ID: ct.ID,
 	}
 
@@ -145,22 +99,26 @@ func (ct *Task) genRecycleDataEx(timeNow time.Time) (rd *TaskData, nowIsValid bo
 	}
 
 	switch ct.TType {
-	case RecycleTaskTypeMinutes:
+	case RecycleTimeTypeMinute:
 		fnFillRD(MinuteStart, MinuteAdd)
-	case RecycleTaskTypeHours:
+	case RecycleTimeTypeHour:
 		fnFillRD(HourStart, HourAdd)
-	case RecycleTaskTypeDays:
+	case RecycleTimeTypeDay:
 		fnFillRD(DayStart, DayAdd)
-	case RecycleTaskTypeWeeks:
+	case RecycleTimeTypeWeek:
 		fnFillRD(WeekStart, WeekAdd)
-	case RecycleTaskTypeMonths:
-		fnFillRD(MonthStart, MonthAdd)
-	case RecycleTaskTypeLunarMonths:
-		fnFillRD(LunarMonthStart, LunarMonthAdd)
-	case RecycleTaskTypeYears:
-		fnFillRD(YearStart, YearAdd)
-	case RecycleTaskTypeLunarYears:
-		fnFillRD(LunarYearStart, LunarYearBeginAdd)
+	case RecycleTimeTypeMonth:
+		if ct.LunarFlag {
+			fnFillRD(LunarMonthStart, LunarMonthAdd)
+		} else {
+			fnFillRD(MonthStart, MonthAdd)
+		}
+	case RecycleTimeTypeYear:
+		if ct.LunarFlag {
+			fnFillRD(LunarYearStart, LunarYearBeginAdd)
+		} else {
+			fnFillRD(YearStart, YearAdd)
+		}
 	default:
 		panic("ct.TType")
 	}
