@@ -41,7 +41,8 @@ func main() {
 
 	_ = pathutils.MustDirExists(dataRoot)
 
-	logger := l.NewFileLoggerWrapper(filepath.Join(dataRoot, "task_log.txt"))
+	logger := l.NewConsoleLoggerWrapper()
+	//logger := l.NewFileLoggerWrapper(filepath.Join(dataRoot, "task_log.txt"))
 	logger.GetLogger().SetLevel(l.LevelDebug)
 	logger.Info("new time assist start at:", time.Now())
 
