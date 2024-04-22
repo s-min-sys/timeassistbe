@@ -56,7 +56,7 @@ func WeekEnd(t time.Time) time.Time {
 func WeekAdd(t time.Time, weeks int) time.Time {
 	sw := calendar.NewSolarWeekFromYmd(t.Year(), int(t.Month()), t.Day(), 1)
 
-	sw = sw.Next(weeks, true)
+	sw = sw.Next(weeks, false)
 
 	return time.Date(sw.GetYear(), time.Month(sw.GetMonth()), sw.GetDay(), t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), t.Location())
 }
