@@ -67,7 +67,7 @@ func main() {
 
 	r := mux.NewRouter()
 
-	r.HandleFunc("/add/alarms", func(writer http.ResponseWriter, request *http.Request) {
+	r.HandleFunc("/alarms/add", func(writer http.ResponseWriter, request *http.Request) {
 		var alarms []timeassist.Alarm
 
 		err = json.NewDecoder(request.Body).Decode(&alarms)
@@ -100,7 +100,7 @@ func main() {
 		}
 	}).Methods(http.MethodPost)
 
-	r.HandleFunc("/add/alarm", func(writer http.ResponseWriter, request *http.Request) {
+	r.HandleFunc("/alarm/add", func(writer http.ResponseWriter, request *http.Request) {
 		var respWrapper ResponseWrapper
 
 		respWrapper.Apply(handleAddAlarm(request, alarmManager))
@@ -108,7 +108,7 @@ func main() {
 		httpResp(&respWrapper, writer)
 	}).Methods(http.MethodPost)
 
-	r.HandleFunc("/remove/alarm", func(writer http.ResponseWriter, request *http.Request) {
+	r.HandleFunc("/alarm/remove", func(writer http.ResponseWriter, request *http.Request) {
 		var respWrapper ResponseWrapper
 
 		respWrapper.Apply(handleRemoveAlarm(request, alarmManager))
@@ -128,7 +128,7 @@ func main() {
 	}).Methods(http.MethodGet)
 
 	//
-	r.HandleFunc("/add/task", func(writer http.ResponseWriter, request *http.Request) {
+	r.HandleFunc("/task/add", func(writer http.ResponseWriter, request *http.Request) {
 		var respWrapper ResponseWrapper
 
 		respWrapper.Apply(handleAddTask(request, taskManger))
@@ -136,7 +136,18 @@ func main() {
 		httpResp(&respWrapper, writer)
 	}).Methods(http.MethodPost)
 
-	r.HandleFunc("/tasks", func(writer http.ResponseWriter, request *http.Request) {
+	r.HandleFunc("/task/detail", func(writer http.ResponseWriter, request *http.Request) {
+		var respWrapper ResponseWrapper
+
+		items, code, msg := handleGetRTasks(request, timer, metaStorage)
+		if respWrapper.Apply(code, msg) {
+			respWrapper.Resp = items
+		}
+
+		httpResp(&respWrapper, writer)
+	}).Methods(http.MethodGet)
+
+	r.HandleFunc("/shows", func(writer http.ResponseWriter, request *http.Request) {
 		var respWrapper ResponseWrapper
 
 		tasks, code, msg := handleGetTasks(taskList)
@@ -147,23 +158,13 @@ func main() {
 		httpResp(&respWrapper, writer)
 	})
 
-	r.HandleFunc("/tasks/{task_id}/done", func(writer http.ResponseWriter, request *http.Request) {
-		_ = taskList.Remove(mux.Vars(request)["task_id"])
-
+	r.HandleFunc("/shows/{task_id}/done", func(writer http.ResponseWriter, request *http.Request) {
 		var respWrapper ResponseWrapper
 
-		respWrapper.Apply(CodeSuccess, "")
+		respWrapper.Apply(handleTaskDone(request, taskList, taskManger))
 
 		httpResp(&respWrapper, writer)
 	})
-
-	r.HandleFunc("/tasks/{task_id}", func(writer http.ResponseWriter, request *http.Request) {
-		var respWrapper ResponseWrapper
-
-		respWrapper.Apply(CodeErrsNotImplemented, "")
-
-		httpResp(&respWrapper, writer)
-	}).Methods(http.MethodPost)
 
 	doNotify(logger, cfg.NotifyURL, "time assist be started")
 
@@ -386,6 +387,84 @@ func handleAddTask(request *http.Request, taskManager timeassist.TaskManager) (c
 
 		return
 	}
+
+	code = CodeSuccess
+
+	return
+}
+
+func handleTaskDone(request *http.Request, taskList timeassist.ShowList, taskManager timeassist.TaskManager) (code Code, msg string) {
+	taskID := mux.Vars(request)["task_id"]
+
+	if timeassist.ParsePreOnID(taskID) == timeassist.TaskIDPre {
+		taskManager.TaskDone(taskID)
+	}
+
+	_ = taskList.Remove(taskID)
+
+	code = CodeSuccess
+
+	return
+}
+
+func handleGetRTasks(_ *http.Request, t timeassist.TaskTimer, storage kv.StorageTiny) (aItems []AlarmItem, code Code, msg string) {
+	items, err := t.List()
+	if err != nil {
+		code = CodeErrInternal
+		msg = err.Error()
+
+		return
+	}
+
+	aItems = make([]AlarmItem, 0, len(items))
+
+	fnFormatTime := func(t time.Time) string {
+		return t.Format("2006-01-02 15:04:05")
+	}
+
+	fnFormatTimeStamp := func(tm int64) string {
+		return fnFormatTime(time.Unix(tm, 0))
+	}
+
+	for _, d := range items {
+		idPre := timeassist.ParsePreOnID(d.Data.ID)
+		if idPre != timeassist.TaskIDPre {
+			continue
+		}
+
+		task := &timeassist.Task{}
+
+		ok, e := storage.Get(d.Data.ID, task)
+		if e != nil || !ok {
+			continue
+		}
+
+		aItems = append(aItems, AlarmItem{
+			ID:        d.Data.ID,
+			CheckAt:   d.At.Unix(),
+			CheckAtS:  fnFormatTime(d.At),
+			ShowAt:    d.Data.StartUTC,
+			ShowAtS:   fnFormatTimeStamp(d.Data.StartUTC),
+			ExpireAt:  d.Data.EndUTC,
+			ExpireAtS: fnFormatTimeStamp(d.Data.EndUTC),
+			Text:      task.Text,
+			Value:     "",
+			AValue:    task.Desc(),
+			LeftTime:  utils.LeftTimeString(time.Unix(d.Data.EndUTC, 0)),
+		})
+	}
+
+	slices.SortFunc(aItems, func(a, b AlarmItem) int {
+		if a.ExpireAt < b.ExpireAt {
+			return -1
+		}
+
+		if a.ExpireAt > b.ExpireAt {
+			return 1
+		}
+
+		return 0
+	})
 
 	code = CodeSuccess
 

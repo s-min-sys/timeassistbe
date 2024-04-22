@@ -14,6 +14,7 @@ type TaskManager interface {
 	Add(task *Task) error
 	Remove(taskID string) error
 	Done(taskID string) error
+	TaskDone(taskID string)
 }
 
 func NewTaskManager(storage kv.Storage, timer BizTaskTimer, taskList ShowList, logger l.Wrapper) TaskManager {
@@ -70,6 +71,34 @@ func (impl *taskManagerImpl) formatTaskSubTitle(task *Task, taskData *ShowItem) 
 
 	return time.Unix(taskData.StartUTC, 0).Format(timeLayout) + "-" +
 		time.Unix(taskData.EndUTC, 0).Format(timeLayout)
+}
+
+func (impl *taskManagerImpl) TaskDone(taskID string) {
+	if ParsePreOnID(taskID) != TaskIDPre {
+		return
+	}
+
+	var task Task
+
+	ok, err := impl.storage.Get(taskID, &task)
+	if err != nil {
+		return
+	}
+
+	if !ok {
+		return
+	}
+
+	if task.TType == TimeTypeOnce {
+		return
+	}
+
+	rd, _ := task.GenRecycleData()
+	if rd == nil {
+		return
+	}
+
+	_ = impl.timer.AddTimer(time.Unix(rd.EndUTC, 0), rd)
 }
 
 func (impl *taskManagerImpl) timerCb(dRemoved *ShowItem) (at time.Time, data *ShowItem, err error) {

@@ -1,6 +1,7 @@
 package timeassist
 
 import (
+	"fmt"
 	"os"
 	"time"
 )
@@ -39,6 +40,41 @@ func (ct *Task) Valid() (err error) {
 	err = nil
 
 	return
+}
+
+func (ct *Task) Desc() string {
+	var desc string
+
+	lunar := ""
+	if ct.LunarFlag {
+		lunar = "阴历"
+	}
+
+	auto := ""
+	if ct.Auto {
+		auto = "自动过期刷新"
+	}
+
+	switch ct.TType {
+	case TimeTypeOnce:
+		desc = "单次"
+	case RecycleTimeTypeYear:
+		desc = fmt.Sprintf("%d %s年一次 %s", ct.Value, lunar, auto)
+	case RecycleTimeTypeMonth:
+		desc = fmt.Sprintf("%d %s月一次 %s", ct.Value, lunar, auto)
+	case RecycleTimeTypeWeek:
+		desc = fmt.Sprintf("%d 周一次 %s", ct.Value, auto)
+	case RecycleTimeTypeDay:
+		desc = fmt.Sprintf("%d 天一次 %s", ct.Value, auto)
+	case RecycleTimeTypeHour:
+		desc = fmt.Sprintf("%d 小时一次 %s", ct.Value, auto)
+	case RecycleTimeTypeMinute:
+		desc = fmt.Sprintf("%d 分钟一次 %s", ct.Value, auto)
+	default:
+		desc = fmt.Sprintf("unknown type: %d", ct.TType)
+	}
+
+	return desc
 }
 
 func (ct *Task) GenRecycleData() (rd *ShowItem, nowIsValid bool) {
