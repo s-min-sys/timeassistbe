@@ -60,7 +60,7 @@ func (impl *taskManagerImpl) formatTaskSubTitle(task *Task, taskData *ShowItem) 
 	case RecycleTimeTypeDay:
 		timeLayout = "01月02号"
 	case RecycleTimeTypeWeek:
-		timeLayout = "01月02号[Mon]"
+		timeLayout = "01月02号"
 	case RecycleTimeTypeMonth:
 		timeLayout = "2006年01月02号" // nolint: goconst
 	case RecycleTimeTypeYear:
