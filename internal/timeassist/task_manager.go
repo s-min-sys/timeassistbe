@@ -93,12 +93,18 @@ func (impl *taskManagerImpl) TaskDone(taskID string) {
 		return
 	}
 
-	rd, _ := task.GenRecycleData()
+	timeNow := time.Now()
+
+	rd, _ := task.GenRecycleDataEx(timeNow)
 	if rd == nil {
 		return
 	}
 
-	_ = impl.timer.AddTimer(time.Unix(rd.EndUTC, 0), rd)
+	if timeNow.Before(time.Unix(rd.StartUTC, 0)) {
+		_ = impl.timer.AddTimer(time.Unix(rd.StartUTC, 0), rd)
+	} else {
+		_ = impl.timer.AddTimer(time.Unix(rd.EndUTC, 0), rd)
+	}
 }
 
 func (impl *taskManagerImpl) timerCb(dRemoved *ShowItem) (at time.Time, data *ShowItem, err error) {
@@ -108,6 +114,28 @@ func (impl *taskManagerImpl) timerCb(dRemoved *ShowItem) (at time.Time, data *Sh
 
 	ok, err := impl.storage.Get(dRemoved.ID, task)
 	if err != nil || !ok {
+		return
+	}
+
+	timeNow := time.Now()
+
+	if timeNow.Before(time.Unix(dRemoved.StartUTC, 0)) {
+		at = time.Unix(dRemoved.StartUTC, 0)
+		data = dRemoved
+
+		return
+	}
+
+	if timeNow.Before(time.Unix(dRemoved.EndUTC, 0)) {
+		at = time.Unix(dRemoved.EndUTC, 0)
+		data = dRemoved
+
+		_ = impl.showList.Add(&ShowInfo{
+			ID:       task.ID,
+			Value:    task.Text,
+			SubTitle: impl.formatTaskSubTitle(task, dRemoved),
+		})
+
 		return
 	}
 
