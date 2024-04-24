@@ -108,12 +108,23 @@ func (impl *taskManagerImpl) TaskDone(taskID string) {
 }
 
 func (impl *taskManagerImpl) timerCb(dRemoved *ShowItem) (at time.Time, data *ShowItem, err error) {
-	_ = impl.showList.Remove(dRemoved.ID)
+	showInfo, err := impl.showList.Get(dRemoved.ID)
+	if err != nil {
+		return
+	}
 
 	task := &Task{}
 
 	ok, err := impl.storage.Get(dRemoved.ID, task)
-	if err != nil || !ok {
+	if err != nil {
+		return
+	}
+
+	if !ok {
+		if showInfo != nil {
+			_ = impl.showList.Remove(dRemoved.ID)
+		}
+
 		return
 	}
 
@@ -122,6 +133,10 @@ func (impl *taskManagerImpl) timerCb(dRemoved *ShowItem) (at time.Time, data *Sh
 	if timeNow.Before(time.Unix(dRemoved.StartUTC, 0)) {
 		at = time.Unix(dRemoved.StartUTC, 0)
 		data = dRemoved
+
+		if showInfo != nil {
+			_ = impl.showList.Remove(dRemoved.ID)
+		}
 
 		return
 	}
@@ -139,6 +154,16 @@ func (impl *taskManagerImpl) timerCb(dRemoved *ShowItem) (at time.Time, data *Sh
 		return
 	}
 
+	if !task.Auto {
+		if showInfo != nil {
+			showInfo.AlarmFlag = true
+
+			_ = impl.showList.Add(showInfo)
+
+			return
+		}
+	}
+
 	rd, nowIsValid := task.GenRecycleDataEx(time.Unix(dRemoved.EndUTC, 0))
 	if nowIsValid {
 		_ = impl.showList.Add(&ShowInfo{
@@ -147,11 +172,13 @@ func (impl *taskManagerImpl) timerCb(dRemoved *ShowItem) (at time.Time, data *Sh
 			SubTitle: impl.formatTaskSubTitle(task, rd),
 		})
 
-		if task.Auto {
-			at = time.Unix(rd.EndUTC, 0)
-			data = rd
-		}
+		at = time.Unix(rd.EndUTC, 0)
+		data = rd
 	} else {
+		if showInfo != nil {
+			_ = impl.showList.Remove(dRemoved.ID)
+		}
+
 		if time.Now().Unix() < rd.StartUTC {
 			at = time.Unix(rd.StartUTC, 0)
 		} else {
@@ -211,9 +238,7 @@ func (impl *taskManagerImpl) Add(task *Task) (err error) {
 			return
 		}
 
-		if task.Auto {
-			err = impl.timer.AddTimer(time.Unix(rd.EndUTC, 0), rd)
-		}
+		err = impl.timer.AddTimer(time.Unix(rd.EndUTC, 0), rd)
 	} else {
 		err = impl.timer.AddTimer(time.Unix(rd.StartUTC, 0), rd)
 	}

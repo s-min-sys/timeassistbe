@@ -50,7 +50,7 @@ func main() {
 	timer := timeassist.NewTaskTimer(filepath.Join(dataRoot, "task_timer"))
 	taskTimer := timeassist.NewBizTimer(timer)
 
-	taskList := timeassist.NewShowList(filepath.Join(dataRoot, "task_list"), func(task *timeassist.ShowInfo, visible bool) {
+	showList := timeassist.NewShowList(filepath.Join(dataRoot, "task_list"), func(task *timeassist.ShowInfo, visible bool) {
 		if !visible {
 			return
 		}
@@ -58,8 +58,8 @@ func main() {
 		notifyAlarm(logger, cfg.NotifyURL, task)
 	})
 
-	taskManger := timeassist.NewTaskManager(metaStorage, taskTimer, taskList, logger)
-	alarmManager := timeassist.NewAlarmManager(metaStorage, taskTimer, taskList, logger)
+	taskManger := timeassist.NewTaskManager(metaStorage, taskTimer, showList, logger)
+	alarmManager := timeassist.NewAlarmManager(metaStorage, taskTimer, showList, logger)
 
 	timer.Start()
 
@@ -151,7 +151,7 @@ func main() {
 	r.HandleFunc("/shows", func(writer http.ResponseWriter, request *http.Request) {
 		var respWrapper ResponseWrapper
 
-		tasks, code, msg := handleGetTasks(taskList)
+		tasks, code, msg := handleGetTasks(showList)
 		if respWrapper.Apply(code, msg) {
 			respWrapper.Resp = tasks
 		}
@@ -162,7 +162,7 @@ func main() {
 	r.HandleFunc("/shows/{task_id}/done", func(writer http.ResponseWriter, request *http.Request) {
 		var respWrapper ResponseWrapper
 
-		respWrapper.Apply(handleTaskDone(request, taskList, taskManger))
+		respWrapper.Apply(handleTaskDone(request, showList, taskManger))
 
 		httpResp(&respWrapper, writer)
 	})
