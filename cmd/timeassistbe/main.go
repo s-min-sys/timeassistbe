@@ -548,11 +548,19 @@ func (wr *ResponseWrapper) Apply(code Code, msg string) bool {
 }
 
 func notifyAlarm(logger l.Wrapper, notifyURL string, task *timeassist.ShowInfo) {
-	if !task.AlarmFlag {
-		return
-	}
+	var text string
 
-	text := fmt.Sprintf("%s %s - %s", task.Value, task.SubTitle, task.AlarmAt.Format("2006-01-02 15:04:05"))
+	if task.VOTaskType == timeassist.VOTaskTypeAlarm {
+		text = fmt.Sprintf("闹钟: %s %s - %s", task.Value, task.SubTitle, task.AlarmAt.Format("2006-01-02 15:04:05"))
+		if task.AlarmFlag {
+			text += " 已经过期"
+		}
+	} else {
+		text = fmt.Sprintf("任务: %s %s", task.Value, task.SubTitle)
+		if task.AlarmFlag {
+			text += " 已经过期"
+		}
+	}
 
 	doNotify(logger, notifyURL, text)
 }
