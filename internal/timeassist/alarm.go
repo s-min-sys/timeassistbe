@@ -306,10 +306,23 @@ func (av *AlarmValue) StringNoNowTime(aType TimeType) (bool, string) {
 			return dayS
 		}
 
+		timeNow := time.Now()
+
+		year := av.Year
+		month := av.Month
+
+		if year <= 0 {
+			year = timeNow.Year()
+		}
+
+		if month <= 0 {
+			month = int(timeNow.Month())
+		}
+
 		if av.Lunar {
-			days = LunarGetDaysOfMonth(av.Year, av.Month)
+			days = LunarGetDaysOfMonth(year, month)
 		} else {
-			days = GetDaysOfMonth(av.Year, av.Month)
+			days = GetDaysOfMonth(year, month)
 		}
 
 		switch av.Day {
