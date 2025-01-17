@@ -1,8 +1,3 @@
 #!/bin/bash
 
-d=$(cd "$(dirname "$0")"; pwd)
-
-# bash scripts/deploy_x.sh timeassistbe deploy_root
-# bash deploy_x.sh timeassistbe timeassistbe
-bash deploy_x.sh timeassistbe
-bash deploy_x.sh timeassistbe-pub timeassistbe timeassistbe
+bash deploy_x_wkman.sh timeassistbe wkman/timeassistbe timeassistbe

@@ -148,7 +148,7 @@ func main() {
 		httpResp(&respWrapper, writer)
 	}).Methods(http.MethodGet)
 
-	r.HandleFunc("/shows", func(writer http.ResponseWriter, request *http.Request) {
+	r.HandleFunc("/shows", func(writer http.ResponseWriter, _ *http.Request) {
 		var respWrapper ResponseWrapper
 
 		tasks, code, msg := handleGetTasks(showList)

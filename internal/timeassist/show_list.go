@@ -187,7 +187,7 @@ func (impl *showListImpl) Remove(taskID string) (err error) {
 }
 
 func (impl *showListImpl) GetList() (tasks []*ShowInfo, err error) {
-	ds, err := impl.storage.GetList(func(key string) interface{} {
+	ds, err := impl.storage.GetList(func(_ string) interface{} {
 		return &ShowInfo{}
 	})
 	if err != nil {

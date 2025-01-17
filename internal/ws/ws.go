@@ -34,7 +34,7 @@ func (impl *Ws) init(addr string, handlers map[string]Handler) {
 
 	for s, handler := range handlers {
 		r.HandleFunc(s, func(writer http.ResponseWriter, request *http.Request) {
-			upgrader := websocket.Upgrader{CheckOrigin: func(r *http.Request) bool {
+			upgrader := websocket.Upgrader{CheckOrigin: func(_ *http.Request) bool {
 				return true
 			}}
 

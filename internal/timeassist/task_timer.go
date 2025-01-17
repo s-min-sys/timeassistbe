@@ -94,7 +94,7 @@ type taskTimerImpl struct {
 }
 
 func (impl *taskTimerImpl) check() {
-	ds, err := impl.storage.GetMap(func(key string) interface{} {
+	ds, err := impl.storage.GetMap(func(_ string) interface{} {
 		return &D{}
 	})
 	if err != nil {
@@ -172,7 +172,7 @@ func (impl *taskTimerImpl) SetCallback(cb Callback) {
 }
 
 func (impl *taskTimerImpl) List() (items []D, err error) {
-	ds, err := impl.storage.GetMap(func(key string) interface{} {
+	ds, err := impl.storage.GetMap(func(_ string) interface{} {
 		return &D{}
 	})
 	if err != nil {
