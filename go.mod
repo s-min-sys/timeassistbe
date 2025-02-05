@@ -7,11 +7,11 @@ require (
 	github.com/buger/goterm v1.0.4
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.5.0
-	github.com/s-min-sys/notifier-share v0.0.4
+	github.com/s-min-sys/notifier-share v0.0.5
 	github.com/satori/go.uuid v1.2.0
 	github.com/sgostarter/i v0.1.16
-	github.com/sgostarter/libconfig v0.0.1
-	github.com/sgostarter/libeasygo v0.1.68
+	github.com/sgostarter/libconfig v0.0.2
+	github.com/sgostarter/libeasygo v0.1.86
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/exp v0.0.0-20231110203233-9a3e6036ecaa
 	gopkg.in/yaml.v3 v3.0.1

@@ -11,6 +11,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/s-min-sys/notifier-share/pkg"
+	"github.com/s-min-sys/notifier-share/pkg/model"
 	"github.com/s-min-sys/timeassistbe/internal/autoimport"
 	"github.com/s-min-sys/timeassistbe/internal/timeassist"
 	"github.com/s-min-sys/timeassistbe/internal/utils"
@@ -567,23 +568,24 @@ func notifyAlarm(logger l.Wrapper, notifyURL string, task *timeassist.ShowInfo) 
 
 func doNotify(logger l.Wrapper, notifyURL, text string) {
 	go func() {
-		fnSend := func(senderID pkg.SenderID, receiverType pkg.ReceiverType, text string) {
-			code, errMsg := pkg.SendTextMessage(notifyURL, &pkg.TextMessage{
-				SenderID:     senderID,
-				ReceiverType: receiverType,
-				Text:         text,
+		fnSend := func(receiverType model.ReceiverType, text string) {
+			code, errMsg := pkg.SendTextMessage(notifyURL, &model.TextMessage{
+				SendMessageTarget: model.SendMessageTarget{
+					SenderBy: model.SenderByAll,
+					BizCode:  "z",
+					ToType:   receiverType,
+					FindOpts: 0,
+				},
+				Text: text,
 			})
 			if code != ptl.CodeSuccess {
-				logger.WithFields(l.StringField("errMsg", errMsg), l.StringField("senderID", string(senderID)),
+				logger.WithFields(l.StringField("errMsg", errMsg),
 					l.IntField("receiverType", int(receiverType)), l.StringField("text", text)).
 					Info("send failed")
 			}
 		}
 
-		fnSend(pkg.SenderIDTelegram, pkg.ReceiverTypeAdminUsers, text)
-		fnSend(pkg.SenderIDTelegram, pkg.ReceiverTypeAdminGroups, text)
-
-		fnSend(pkg.SenderIDWeChat, pkg.ReceiverTypeAdminUsers, text)
-		fnSend(pkg.SenderIDWeChat, pkg.ReceiverTypeAdminGroups, text)
+		fnSend(model.ReceiverTypeAdminUsers, text)
+		fnSend(model.ReceiverTypeAdminGroups, text)
 	}()
 }
